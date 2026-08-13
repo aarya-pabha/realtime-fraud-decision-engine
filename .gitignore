@@ -25,3 +25,8 @@ __pycache__/
 data/
 models/
 *.duckdb
+
+# Agent Documentation
+decision.md
+memory.md
+GEMINI.md
