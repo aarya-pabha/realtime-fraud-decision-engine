@@ -1,0 +1,27 @@
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Environment Variables
+.env
+.env.local
+
+# MLflow Tracking
+mlruns.db
+mlruns/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE / OS Files
+.vscode/
+.idea/
+.DS_Store
+
+# Data & Models
+data/
+models/
+*.duckdb
