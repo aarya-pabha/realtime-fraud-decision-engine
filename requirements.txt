@@ -1,6 +1,14 @@
 python-dotenv>=0.5.1
 duckdb
-duckdb
 kaggle
 pytest
 pytest-mock
+ydata-profiling>=4.6.0
+jupyter>=1.1.0
+setuptools
+scikit-learn>=1.4.0
+lightgbm>=4.3.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+feast>=0.40.0
+redis>=5.0.0
