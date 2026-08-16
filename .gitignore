@@ -26,6 +26,8 @@ __pycache__/
 /models/
 *.duckdb
 feature_repo/data/
+catboost_info/
+
 
 # Agent Documentation
 decision.md
