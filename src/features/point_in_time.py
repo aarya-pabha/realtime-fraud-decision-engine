@@ -11,21 +11,18 @@ def build_offline_feature_tables(db_path="feature_store.duckdb", output_dir="dat
     print(f"Connecting to DuckDB at {db_path}...")
     con = duckdb.connect(db_path)
     
-    print("1. Synthesizing timestamps and entity keys...")
+    print("1. Synthesizing timestamps, joining identity, and building entity keys...")
     con.execute("""
     CREATE OR REPLACE TABLE enriched_transactions AS
     SELECT 
-        t.TransactionID,
-        t.isFraud,
-        t.TransactionDT,
+        t.*,
+        i.DeviceType,
+        i.DeviceInfo,
+        i.id_30,
+        i.id_31,
+        i.id_33,
         TIMESTAMP '2017-12-01 00:00:00' + (t.TransactionDT || ' seconds')::INTERVAL AS event_timestamp,
         NOW() AS created_timestamp,
-        t.TransactionAmt,
-        t.ProductCD,
-        t.card1, t.card2, t.card3, t.card4, t.card5, t.card6,
-        t.addr1, t.addr2,
-        t.P_emaildomain, t.R_emaildomain,
-        t.D1, t.D2, t.D15,
         -- Universal Card Base Entity Key (100% complete)
         CONCAT_WS('_', t.card1, COALESCE(t.card2, 0), COALESCE(t.card3, 0), COALESCE(t.card4, 'unk'), COALESCE(t.card5, 0), COALESCE(t.card6, 'unk')) AS card_base_id,
         -- Strict Cardholder UID (Zero null collision)
@@ -34,7 +31,8 @@ def build_offline_feature_tables(db_path="feature_store.duckdb", output_dir="dat
             COALESCE(CAST(t.addr1 AS VARCHAR), 'NONE_' || CAST(t.TransactionID AS VARCHAR)),
             COALESCE(t.P_emaildomain, 'NONE_' || CAST(t.TransactionID AS VARCHAR))
         ) AS cardholder_uid
-    FROM transactions t;
+    FROM transactions t
+    LEFT JOIN identities i ON t.TransactionID = i.TransactionID;
     """)
     
     print("2. Computing Zero-Leakage Window Functions for card_base_id...")

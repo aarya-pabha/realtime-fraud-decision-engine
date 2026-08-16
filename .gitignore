@@ -22,9 +22,10 @@ __pycache__/
 .DS_Store
 
 # Data & Models
-data/
-models/
+/data/
+/models/
 *.duckdb
+feature_repo/data/
 
 # Agent Documentation
 decision.md

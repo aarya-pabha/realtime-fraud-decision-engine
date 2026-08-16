@@ -210,7 +210,38 @@ sequenceDiagram
 
 ---
 
-## 10. Complete Feature Catalog for Phase 3 Feast Registration
+## 10. Temporal Partitioning & Class Representation Analysis
+
+To guarantee zero look-ahead data leakage and eliminate hyperparameter selection bias on holdout data, the 183-day labeled dataset (590,540 rows) is partitioned into a strict **3-Way Temporal Horizon**:
+
+```
+0 ──────────── Day 120 ─────────── Day 151 ─────────── Day 183
+│   TRAINING SET      │  VALIDATION SET   │   HOLDOUT TEST SET   │
+│   (Months 1 to 4)   │     (Month 5)     │      (Month 6)       │
+│   410,601 rows      │   87,512 rows     │    92,427 rows       │
+│                     │                   │                      │
+│ • Fit tree splits   │ • Optuna tuning   │ • Untouched holdout  │
+│ • Base weights      │ • Early stopping  │ • Final test metrics │
+│                     │ • Knee selection  │ • Live stream replay │
+```
+
+### Empirical Class & Volume Representation Across Partitions:
+
+| Temporal Partition | Date Horizon | Total Txs | Share (%) | Legit (0) | Fraud (1) | Fraud Rate (%) | Gross Volume ($) | Fraud Volume ($) | Fraud Value Share (%) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Train** | Days 1 to 120 | 410,601 | 69.53% | 396,182 | 14,419 | **3.512%** | $55,240,137.19 | $2,094,779.87 | 3.792% |
+| **2. Validation** | Days 121 to 150 | 87,512 | 14.82% | 84,481 | 3,031 | **3.464%** | $11,772,216.95 | $501,602.80 | 4.261% |
+| **3. Holdout Test** | Days 151 to 183 | 92,427 | 15.65% | 89,214 | 3,213 | **3.476%** | $12,726,594.59 | $487,462.19 | 3.830% |
+| **TOTAL DATASET** | **Days 1 to 183** | **590,540** | **100.0%** | **569,877** | **20,663** | **3.499%** | **$79,738,948.73** | **$3,083,844.86** | **3.867%** |
+
+### Key Representation Findings:
+1. **Prevalence Stability:** The fraud event rate remains virtually constant across all three time slices ($3.512\% \to 3.464\% \to 3.476\%$, variance $<\pm 0.048\%$).
+2. **Statistical Power:** Each partition possesses thousands of positive fraud events (Train: 14,419; Val: 3,031; Test: 3,213), giving Optuna high-fidelity metric confidence and the Holdout Test $>\$487\text{k}$ in fraud exposure for financial evaluation.
+3. **Sub-Product Risk Consistency:** High-risk merchant segments (`ProductCD = C` at $\sim 11.2\%\text{--}13.5\%$ fraud rate) and retail volume (`ProductCD = W` at $\sim 2.0\%$ fraud rate) maintain consistent relative risk throughout all 6 months.
+
+---
+
+## 11. Complete Feature Catalog for Phase 3 Feast Registration
 
 The 72 features engineered and validated in Phase 2 define the exact schema contract for the Phase 3 Feature Store:
 

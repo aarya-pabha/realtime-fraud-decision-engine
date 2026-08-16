@@ -72,4 +72,53 @@
 - **Test 3 (`test_feature_view_schema_compatibility`)**: Asserts all 72 features align with Feast schema types (`Float32`, `Int32`, `String`).
 
 ---
-*(Phase 3 through 8 specifications will be appended upon the completion of Phase 2.)*
+
+## Phase 3: Model Engine (LightGBM Tuning with Optuna & MLflow Registry)
+
+### 1. Dataset & Temporal Partitioning (`src/models/train_lgb.py`)
+- **Full Scope Dataset**: Complete 590,540 rows utilizing the 72 validated domain features.
+- **Strict Temporal Split**:
+  - **Training Set**: Days 1 to 120 (`TransactionDT < 120 * 86400`) -> 410,601 transactions.
+  - **Holdout Validation Set**: Days 121 to 183 (`TransactionDT >= 120 * 86400`) -> 179,939 transactions.
+  - Zero cross-contamination or look-ahead leakage across temporal horizons.
+
+### 2. Optuna Hyperparameter Optimization (`src/models/tune_optuna.py`)
+- **Objective**: Maximize Out-of-Time **PR-AUC (Average Precision)** while tracking ROC-AUC.
+- **Search Space**:
+  - `learning_rate`: `[0.01, 0.1]` (log scale)
+  - `num_leaves`: `[31, 255]`
+  - `max_depth`: `[5, 12]`
+  - `min_child_samples`: `[20, 300]`
+  - `subsample` (bagging fraction): `[0.6, 1.0]`
+  - `colsample_bytree` (feature fraction): `[0.6, 1.0]`
+  - `scale_pos_weight`: `[5.0, 20.0]` (handles 3.50% class imbalance)
+  - `reg_alpha` (L1), `reg_lambda` (L2): `[1e-3, 10.0]` (log scale)
+- **Early Stopping**: 25 boosting rounds without validation metric improvement.
+
+### 3. MLflow Experiment & Model Registry (`src/models/train_lgb.py`)
+- **Backend**: Local SQLite database at `sqlite:///mlruns.db` (zero external container overhead per `GEMINI.md`).
+- **Experiment**: `transaction_fraud_lightgbm`.
+- **Logged Entities**:
+  - Full hyperparameter config (`best_params`).
+  - Validation metrics: `oot_roc_auc`, `oot_pr_auc`, `brier_score`, `log_loss`.
+  - Feature importance metrics for all 72 features.
+  - Model artifact: Serialized LightGBM Booster (`models/fraud_lgb_model.txt` and MLflow model packaging).
+
+### 4. Real-Time SHAP Reason Code Generator (`src/models/explainability.py`)
+- **TreeExplainer Engine**: Initialized on trained Booster for sub-10ms localized attribution.
+- **Reason Code Dictionary**: Maps top-3 positive Shapley contribution feature indices into domain explanations:
+  - `amt_to_mean_card` / `TransactionAmt` -> `UNUSUAL_TRANSACTION_AMOUNT`
+  - `tx_count_5m` / `tx_count_1h` -> `HIGH_VELOCITY_BURST`
+  - `is_foreign_currency` / `decimal_places` -> `FOREIGN_CURRENCY_ANOMALY`
+  - `email_domain_match` / `is_disposable_email` -> `SUSPICIOUS_EMAIL_DOMAIN`
+  - `D1_to_mean_card` / `D2_to_mean_card` -> `UNUSUAL_CARD_LIFECYCLE_DELTA`
+  - `device_corp` / `screen_aspect_ratio` -> `RISKY_DEVICE_FINGERPRINT`
+- **Output Schema**: Returns top-3 reason codes, baseline expected value, and individual feature contributions.
+
+### 5. Verification Suite (`tests/test_model_engine.py`)
+- **Test 1 (`test_model_prediction_range`)**: Asserts model probabilities $\in [0, 1]$ and strictly monotonic with risk.
+- **Test 2 (`test_shap_reason_codes_latency_and_format`)**: Asserts SHAP reason code generation runs in $<15\text{ms}$ and yields exactly 3 non-empty valid codes.
+- **Test 3 (`test_mlflow_run_logged`)**: Asserts experiment run and metrics are successfully stored in `mlruns.db`.
+
+---
+*(Phase 4 through 8 specifications will be appended upon the completion of Phase 3.)*
