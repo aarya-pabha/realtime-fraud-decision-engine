@@ -121,4 +121,40 @@
 - **Test 3 (`test_mlflow_run_logged`)**: Asserts experiment run and metrics are successfully stored in `mlruns.db`.
 
 ---
-*(Phase 4 through 8 specifications will be appended upon the completion of Phase 3.)*
+
+## Phase 4: Dynamic Transaction-Value Aware Cost Matrix Router (`src/models/cost_router.py`)
+
+### 1. Mathematical Objective & Asymmetric Loss Matrix
+- **Expected Financial Loss Optimization**: Replaces arbitrary static thresholds ($\tau = 0.50$) with dynamic thresholding $\tau^*(\text{TransactionAmt})$ derived from Bayesian Decision Theory.
+- **Cost Parameters (2026 Payments Standard)**:
+  - $C_{\text{FN}}(\text{Amt}) = \text{TransactionAmt} + \$25.00$ (Direct principal fraud loss + chargeback dispute fee)
+  - $C_{\text{FP}}(\text{Amt}) = (\text{TransactionAmt} \times 0.02) + \$5.00$ (Lost interchange margin + customer support churn penalty)
+  - $C_{\text{TP}} = \$0.00$, $C_{\text{TN}} = \$0.00$
+  - $C_{\text{step\_up}} = \$0.05$ (EMV 3DS 2.0 authentication cost)
+- **Dynamic Theoretical Cutoff**:
+  $$\tau^*(\text{Amt}) = \frac{C_{\text{FP}}(\text{Amt})}{C_{\text{FP}}(\text{Amt}) + C_{\text{FN}}(\text{Amt})} = \frac{0.02 \cdot \text{Amt} + 5.00}{1.02 \cdot \text{Amt} + 30.00}$$
+
+### 2. Tri-State Operational Routing Decisions
+- **`APPROVE`**: $P(\text{Fraud}) < \tau_{\text{step\_up}}(\text{Amt}) = \text{clip}(\tau^*(\text{Amt}), 0.03, 0.25)$ (Frictionless flow)
+- **`STEP_UP_3DS`**: $\tau_{\text{step\_up}}(\text{Amt}) \le P(\text{Fraud}) < \tau_{\text{decline}}(\text{Amt}) = \text{clip}(4.0 \cdot \tau^*(\text{Amt}), 0.35, 0.80)$ (SMS OTP Challenge: 85% legit resolution, 95% fraud block)
+- **`DECLINE`**: $P(\text{Fraud}) \ge \tau_{\text{decline}}(\text{Amt})$ (Hard block)
+
+
+### 3. Financial Benchmark Simulator (`src/models/evaluate_cost_router.py`)
+- Evaluates complete **Month 6 Holdout Test Set ($92,453$ transactions)**.
+- Compares Total Dollar Loss ($), Net Savings ($), and Visa VAMP / Mastercard ECP chargeback compliance across:
+  1. Policy A: Naive Approve-All ($\tau = 1.0$)
+  2. Policy B: Standard Static ML Cutoff ($\tau = 0.50$)
+  3. Policy C: Optimal Tuned Static Cutoff ($\tau = \tau_{\text{static\_opt}}$)
+  4. Policy D: Dynamic Value-Aware Cost Router (Novelty #2)
+
+### 4. Verification Suite (`tests/test_router.py`)
+- **Test 1 (`test_monotonicity_with_amount`)**: Proves $\tau^*(A_1) > \tau^*(A_2)$ for $A_1 < A_2$.
+- **Test 2 (`test_threshold_bounds_and_clamping`)**: Asserts mathematical safety bounds.
+- **Test 3 (`test_micro_vs_high_value_routing_behavior`)**: Confirms adaptive risk sensitivity.
+- **Test 4 (`test_sub_millisecond_routing_latency`)**: Asserts execution latency $< 1.0\text{ms}$.
+- **Test 5 (`test_dynamic_router_outperforms_static_baseline`)**: Proves net dollar loss reduction.
+
+---
+*(Phase 5 through 8 specifications will be appended upon completion of Phase 4.)*
+
