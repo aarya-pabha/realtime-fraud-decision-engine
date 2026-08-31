@@ -156,5 +156,47 @@
 - **Test 5 (`test_dynamic_router_outperforms_static_baseline`)**: Proves net dollar loss reduction.
 
 ---
-*(Phase 5 through 8 specifications will be appended upon completion of Phase 4.)*
+
+## Phase 5: Real-Time Scoring Microservice (FastAPI + Redis Online Hydration)
+
+### 1. Architecture & Lifespan Pre-Warming (`src/api/main.py`)
+- **FastAPI Lifespan Context Manager**: Loads LightGBM booster (`models/fraud_lgb_model.txt`), pre-warms native TreeSHAP explainer, initializes `FeatureService`, and prepares `DynamicCostRouter` singletons during startup to eliminate cold-start overhead.
+- **Middleware**: Injects `CORSMiddleware` and microsecond `X-Process-Time-Ms` custom latency headers.
+
+### 2. Pydantic Schemas (`src/api/schemas.py`)
+- **`TransactionPayload`**: Pydantic V2 strictly typed schema for raw payment attributes, card BINs, identity hashes, and D-deltas.
+- **`ScoringResponse`**: Structured decisioning output containing `action` ("APPROVE", "STEP_UP_3DS", "DECLINE"), `fraud_probability`, `expected_cost_dollars`, top-3 `reason_codes`, dynamic `thresholds`, and sub-component `latency` breakdown.
+- **`FeedbackPayload` & `FeedbackResponse`**: Schema for analyst chargeback/dispute label ingestion.
+- **`HealthResponse`**: Liveness probe payload.
+
+### 3. Sub-5ms Online Feature Hydration (`src/api/feature_service.py`)
+- **Dual-Tier Entity Resolution**: Dynamically constructs `card_base_id` and `cardholder_uid`.
+- **Non-Blocking Online Retrieval**: Pings Redis on startup. Retrieves `tx_count_5m`, `tx_count_1h`, and `amt_sum_24h` from Feast online store if active; gracefully falls back to sub-millisecond local streaming feature synthesis when Redis is offline.
+
+### 4. Endpoints & Unified Inference (`src/api/routes/`)
+- **`POST /v1/score`**: Executes unified LightGBM inference & native C++ TreeSHAP attribution via `pred_contrib=True`, computes calibrated sigmoid probability, extracts top-3 reason codes, and applies Bayesian dynamic cost routing in $<25\text{ms}$.
+- **`POST /v1/feedback`**: Ingests ground-truth analyst dispute resolutions and persists them to SQLite buffer `data/feedback_store.sqlite` for downstream drift monitoring.
+- **`GET /v1/health` & `GET /`**: System health and API metadata probes.
+
+### 5. Verification Suite (`tests/test_api.py`)
+- Complete integration test suite verifying 200 OK responses, low-risk `APPROVE`, high-risk `DECLINE`, borderline `STEP_UP_3DS`, $<25\text{ms}$ latency budget, feedback ingestion, and 422 validation handling.
+
+---
+
+## Phase 6: Streaming Ingest (Redpanda) & Interactive Analyst Workbench (Dash / Plotly)
+
+### 1. High-Throughput Streaming Engine (`src/streaming/`)
+- **Transaction Stream Publisher (`src/streaming/producer.py`)**: Reads temporal holdout stream and publishes JSON events to Redpanda Kafka topic `transactions.incoming` with realistic replay speed.
+- **Consumer Microservice (`src/streaming/consumer.py`)**: Consumes incoming events, hydrates features, executes scoring via `/v1/score`, and routes high-risk transactions to `transactions.alerts` topic.
+
+### 2. Interactive Analyst Workbench (`src/frontend/app.py`)
+- **Framework**: Dash / Plotly with custom Vanilla CSS design.
+- **Components**:
+  1. **Live Transaction Ticker**: Real-time streaming table with color-coded actions (`APPROVE` in emerald, `STEP_UP_3DS` in amber, `DECLINE` in crimson).
+  2. **Interactive 3DS Checkout Simulator**: Allows analysts to adjust transaction amount ($10 to $5,000) and feature sliders to visualize dynamic threshold adaptation and SHAP reason code attributions in real time.
+  3. **Evidently AI Drift Monitoring Dashboard**: Visualizes data drift (Wasserstein distance) and prediction drift on analyst feedback batches from `/v1/feedback`.
+
+---
+
+*(Phase 7 and 8 specifications will be appended upon completion of Phase 6.)*
 

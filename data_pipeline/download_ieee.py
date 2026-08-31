@@ -10,7 +10,6 @@ def download_dataset(output_dir: str = 'data/raw'):
     os.makedirs(output_dir, exist_ok=True)
     
     print(f"Downloading IEEE dataset to {output_dir}...")
-    print(f"Downloading IEEE dataset to {output_dir}...")
     subprocess.run(
         ['kaggle', 'competitions', 'download', '-c', 'ieee-fraud-detection', '-p', output_dir],
         check=True
