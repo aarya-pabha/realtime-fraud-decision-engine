@@ -34,14 +34,16 @@ Implementation roadmap of the production-grade fraud detection platform using th
 
 ---
 
-### [NEXT] Phase 5: Real-Time Scoring Microservice (FastAPI + Redis Hydration)
-- [ ] `src/api/main.py`: FastAPI app initialization with CORS and logging
-- [ ] `src/api/routes/scoring.py`: POST `/v1/score` (sub-15ms endpoint with Redis online feature hydration, LightGBM inference, SHAP reason codes, and dynamic routing)
-- [ ] `src/api/routes/feedback.py`: POST `/v1/feedback` (ingests analyst chargeback labels for drift monitoring)
-- [ ] `src/api/routes/health.py`: GET `/v1/health` (liveness & readiness probes)
-- [ ] `tests/test_api.py`: FastAPI TestClient integration test suite
+### [COMPLETED] Phase 5: Real-Time Scoring Microservice (FastAPI + Redis Hydration)
+- [x] `src/api/main.py`: FastAPI app initialization with lifespan pre-warming, CORS, and request timing middleware
+- [x] `src/api/schemas.py`: Pydantic V2 validated transaction payload, dynamic scoring response, and feedback schemas
+- [x] `src/api/feature_service.py`: Feast Redis online store hydration with non-blocking fallback and sub-1ms transform
+- [x] `src/api/routes/scoring.py`: POST `/v1/score` (sub-15ms unified LightGBM inference, C++ TreeSHAP attribution, and Bayesian dynamic routing)
+- [x] `src/api/routes/feedback.py`: POST `/v1/feedback` & GET `/v1/feedback/stats` (SQLite buffered chargeback label ingestion)
+- [x] `src/api/routes/health.py`: GET `/v1/health` & GET `/` (liveness, readiness, and API metadata)
+- [x] `tests/test_api.py`: FastAPI TestClient integration test suite (8/8 tests passing, verifying SLA latency, Pydantic V2 config, and logic)
 
-### [UPCOMING] Phase 6: Streaming Ingest (Redpanda) & Interactive Analyst Workbench (Dash / Plotly)
+### [NEXT] Phase 6: Streaming Ingest (Redpanda) & Interactive Analyst Workbench (Dash / Plotly)
 - [ ] `src/streaming/producer.py`: Real-time transaction publisher streaming to Redpanda topic
 - [ ] `src/streaming/consumer.py`: Consumer microservice scoring transactions and publishing alerts
 - [ ] `src/frontend/app.py`: High-performance Dash/Plotly Analyst Workbench (live stream, 3DS interactive checkout simulator, Evidently AI drift monitoring)

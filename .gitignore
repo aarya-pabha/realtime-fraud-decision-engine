@@ -31,3 +31,7 @@ feature_repo/data/
 decision.md
 memory.md
 GEMINI.md
+
+# Exploration logs
+catboost_info/
+

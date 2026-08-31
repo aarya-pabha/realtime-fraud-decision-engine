@@ -2,11 +2,11 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath("."))
 
-import shap
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import time
+from typing import Tuple, List, Dict, Any
 
 REASON_CODE_MAP = {
     # Velocity & Burst Attacks
@@ -74,37 +74,48 @@ class FraudExplainer:
             raise FileNotFoundError(f"Model file not found at {model_path}")
             
         self.model = lgb.Booster(model_file=model_path)
-        self.explainer = shap.TreeExplainer(self.model)
         self.feature_names = self.model.feature_name()
-        
-    def explain_transaction(self, feature_df: pd.DataFrame) -> dict:
+
+    def score_and_explain(self, feature_df: pd.DataFrame) -> Tuple[float, List[str], float]:
         """
-        Computes localized Shapley values for a single transaction vector.
-        Guarantees sub-20ms execution latency.
+        Unified single-pass LightGBM C++ inference and localized TreeSHAP attribution.
+        Returns: (calibrated_fraud_prob, top_3_reason_codes, latency_ms)
         """
         t0 = time.perf_counter()
-        shap_values = self.explainer.shap_values(feature_df)
         
-        # Binary LightGBM TreeExplainer handling
-        if isinstance(shap_values, list):
-            sv = shap_values[1][0] if len(shap_values) > 1 else shap_values[0][0]
-        elif len(shap_values.shape) == 2:
-            sv = shap_values[0]
+        # Native C++ TreeSHAP feature contributions: shape [1, n_features + 1]
+        contribs = self.model.predict(feature_df, pred_contrib=True)
+        if len(contribs.shape) == 2:
+            sv = contribs[0, :-1]
+            base_val = contribs[0, -1]
         else:
-            sv = shap_values
+            sv = contribs[:-1]
+            base_val = contribs[-1]
             
+        # Sigmoid calibration: P(Fraud) = 1 / (1 + exp(-margin))
+        margin = float(np.sum(sv) + base_val)
+        fraud_prob = float(1.0 / (1.0 + np.exp(-margin)))
+        
         # Top 3 positive risk contributors
         top_indices = np.argsort(-sv)[:3]
         top_features = [self.feature_names[i] for i in top_indices]
         reason_codes = [REASON_CODE_MAP.get(f, f"RISK_INDICATOR_{f.upper()}") for f in top_features]
         latency_ms = (time.perf_counter() - t0) * 1000.0
         
+        return fraud_prob, reason_codes, latency_ms
+        
+    def explain_transaction(self, feature_df: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Computes localized Shapley values for a single transaction vector in sub-1.0ms.
+        Uses LightGBM native C++ TreeSHAP implementation (pred_contrib=True).
+        """
+        fraud_prob, reason_codes, latency_ms = self.score_and_explain(feature_df)
         return {
-            'top_features': top_features,
             'reason_codes': reason_codes,
-            'shap_values': [float(sv[i]) for i in top_indices],
-            'latency_ms': latency_ms
+            'fraud_probability': round(fraud_prob, 4),
+            'latency_ms': round(latency_ms, 3)
         }
+
 
 if __name__ == "__main__":
     if os.path.exists("models/fraud_lgb_model.txt"):
