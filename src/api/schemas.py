@@ -14,7 +14,7 @@ class TransactionPayload(BaseModel):
     )
     
     TransactionID: Optional[int] = Field(default=None, description="Unique transaction ID")
-    TransactionDT: int = Field(..., ge=0, description="Time delta in seconds from reference epoch")
+    TransactionDT: Optional[int] = Field(default=86400, ge=0, description="Time delta in seconds from reference epoch")
     TransactionAmt: float = Field(..., gt=0.0, description="Transaction payment amount in USD")
     ProductCD: str = Field(default="W", description="Product code category")
     

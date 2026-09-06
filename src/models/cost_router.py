@@ -23,7 +23,10 @@ class CostMatrixConfig(BaseModel):
     min_decline_threshold: float = Field(default=0.35, ge=0.0, le=1.0)
     max_decline_threshold: float = Field(default=0.80, ge=0.0, le=1.0)
 
-class RoutingResult(BaseModel):
+from dataclasses import dataclass
+
+@dataclass(slots=True)
+class RoutingResult:
     action: Literal["APPROVE", "STEP_UP_3DS", "DECLINE"]
     fraud_probability: float
     transaction_amount: float
@@ -49,8 +52,8 @@ class DynamicCostRouter:
         c_fp = (amount * self.cfg.interchange_margin) + self.cfg.customer_friction_cost
         tau_star = c_fp / (c_fn + c_fp)
 
-        tau_step_up = float(np.clip(tau_star, self.cfg.min_step_up_threshold, self.cfg.max_step_up_threshold))
-        tau_decline = float(np.clip(self.cfg.decline_multiplier * tau_star, self.cfg.min_decline_threshold, self.cfg.max_decline_threshold))
+        tau_step_up = max(self.cfg.min_step_up_threshold, min(self.cfg.max_step_up_threshold, tau_star))
+        tau_decline = max(self.cfg.min_decline_threshold, min(self.cfg.max_decline_threshold, self.cfg.decline_multiplier * tau_star))
         return tau_step_up, tau_decline
 
 

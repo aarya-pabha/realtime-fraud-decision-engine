@@ -147,6 +147,6 @@ python src/models/evaluate_cost_router.py
 * [x] **Phase 2: Dual-Tier Feature Store (DuckDB + Redis via Feast)**
 * [x] **Phase 3: Model Engine (LightGBM + Optuna + MLflow + SHAP)**
 * [x] **Phase 4: Dynamic Cost Router (Bayesian Utility + 3DS2 Step-Up)**
-* [ ] **Phase 5: Real-Time Scoring Microservice (FastAPI + Uvicorn)**
-* [ ] **Phase 6: Streaming Ingest (Redpanda) & Analyst Workbench (Dash / Plotly)**
-* [ ] **Phase 7: Orchestration & Empirical SLA Load Benchmark (Docker Compose & Locust)**
+* [x] **Phase 5: Real-Time Scoring Microservice (FastAPI + Uvicorn)**
+* [x] **Phase 6: Streaming Ingest (Redpanda) & Analyst Workbench (Dash / Plotly)**
+* [x] **Phase 7: Orchestration & Empirical SLA Load Benchmark (Docker Compose & Locust)**

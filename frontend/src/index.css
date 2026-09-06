@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-tasko-bg: #f8f9f5;
+  --color-tasko-card: #ffffff;
+  --color-tasko-border: #e9ebe3;
+  --color-tasko-primary: #006323;
+  --color-tasko-primary-hover: #004d1b;
+  --color-tasko-primary-light: #e6f7ec;
+  --color-tasko-text: #202318;
+  --color-tasko-muted: #707367;
+}
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9f5;
+  color: #202318;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbar for modern subtle look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f8f9f5;
+}
+::-webkit-scrollbar-thumb {
+  background: #d8dbcf;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a499;
+}

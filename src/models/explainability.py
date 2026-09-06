@@ -2,11 +2,12 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath("."))
 
+import math
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import time
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Optional
 
 REASON_CODE_MAP = {
     # Velocity & Burst Attacks
@@ -76,7 +77,7 @@ class FraudExplainer:
         self.model = lgb.Booster(model_file=model_path)
         self.feature_names = self.model.feature_name()
 
-    def score_and_explain(self, feature_df: pd.DataFrame) -> Tuple[float, List[str], float]:
+    def score_and_explain(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[float, List[str], float]:
         """
         Unified single-pass LightGBM C++ inference and localized TreeSHAP attribution.
         Returns: (calibrated_fraud_prob, top_3_reason_codes, latency_ms)
@@ -84,17 +85,18 @@ class FraudExplainer:
         t0 = time.perf_counter()
         
         # Native C++ TreeSHAP feature contributions: shape [1, n_features + 1]
-        contribs = self.model.predict(feature_df, pred_contrib=True)
-        if len(contribs.shape) == 2:
-            sv = contribs[0, :-1]
-            base_val = contribs[0, -1]
-        else:
-            sv = contribs[:-1]
-            base_val = contribs[-1]
+        contribs = self.model.predict(
+            feature_df,
+            pred_contrib=True,
+            num_iteration=num_iteration,
+            num_threads=1,
+            validate_features=False
+        )
+        sv = contribs[0, :-1]
             
         # Sigmoid calibration: P(Fraud) = 1 / (1 + exp(-margin))
-        margin = float(np.sum(sv) + base_val)
-        fraud_prob = float(1.0 / (1.0 + np.exp(-margin)))
+        margin = float(contribs[0].sum())
+        fraud_prob = float(1.0 / (1.0 + math.exp(-margin)))
         
         # Top 3 positive risk contributors
         top_indices = np.argsort(-sv)[:3]

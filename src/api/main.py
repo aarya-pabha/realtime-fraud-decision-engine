@@ -11,7 +11,7 @@ import lightgbm as lgb
 from src.models.explainability import FraudExplainer
 from src.models.cost_router import DynamicCostRouter
 from src.api.feature_service import FeatureService
-from src.api.routes import scoring, feedback, health
+from src.api.routes import scoring, feedback, health, stream
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,18 +22,19 @@ async def lifespan(app: FastAPI):
     print("[FastAPI Lifespan] Initializing Production Fraud Decisioning Engine...")
     app.state.start_time = time.time()
     
-    # 1. Load Serialized Production LightGBM Booster
+    # 1. Pre-warm SHAP TreeExplainer & Shared LightGBM Booster
     model_path = "models/fraud_lgb_model.txt"
     if not os.path.exists(model_path):
         # Fallback to parent path if running from subfolder
         model_path = os.path.join("..", "models", "fraud_lgb_model.txt")
         
-    if os.path.exists(model_path):
-        app.state.lgb_model = lgb.Booster(model_file=model_path)
-        feature_names = app.state.lgb_model.feature_name()
-        print(f"[FastAPI Lifespan] Loaded LightGBM booster with {len(feature_names)} features.")
-    else:
+    if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model file not found at {model_path}! Train model first via train_lgb.py.")
+
+    app.state.explainer = FraudExplainer(model_path=model_path)
+    app.state.lgb_model = app.state.explainer.model
+    feature_names = app.state.lgb_model.feature_name()
+    print(f"[FastAPI Lifespan] Loaded LightGBM booster with {len(feature_names)} features.")
         
     # 2. Initialize Feature Hydration Service
     app.state.feature_service = FeatureService(
@@ -41,10 +42,6 @@ async def lifespan(app: FastAPI):
         feature_names=feature_names
     )
     print("[FastAPI Lifespan] FeatureService initialized.")
-    
-    # 3. Pre-warm SHAP TreeExplainer
-    app.state.explainer = FraudExplainer(model_path=model_path)
-    print("[FastAPI Lifespan] SHAP FraudExplainer warmed up.")
     
     # 4. Initialize Dynamic Cost Router
     app.state.cost_router = DynamicCostRouter()
@@ -90,6 +87,7 @@ async def add_process_time_header(request: Request, call_next):
 app.include_router(health.router)
 app.include_router(scoring.router)
 app.include_router(feedback.router)
+app.include_router(stream.router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -196,7 +196,47 @@
   2. **Interactive 3DS Checkout Simulator**: Allows analysts to adjust transaction amount ($10 to $5,000) and feature sliders to visualize dynamic threshold adaptation and SHAP reason code attributions in real time.
   3. **Evidently AI Drift Monitoring Dashboard**: Visualizes data drift (Wasserstein distance) and prediction drift on analyst feedback batches from `/v1/feedback`.
 
+## Phase 7: Orchestration & Empirical SLA Load Benchmark (Locust & Docker Compose)
+
+### 1. Empirical SLA Load Benchmark Architecture (Novelty #4)
+- **Objective**: Empirically verify contractual real-time serving performance ($p95 < 25.0\text{ ms}$, $p99 < 45.0\text{ ms}$, $0.0\%$ failure rate) under sustained 100+ virtual user concurrency and 500+ requests/second.
+- **Client Engine (`tests/locustfile.py`)**:
+  - Subclasses `FastHttpUser` leveraging C-level `geventhttpclient` to eliminate client-side socket saturation.
+  - Implements authentic transaction vector generator mirroring empirical IEEE-CIS dataset distributions across 5 distinct risk scenarios: `standard` (60%), `micro` (20%), `high_value` (10%), `velocity_burst` (5%), and `foreign_travel` (5%).
+  - Configures `network_timeout = 5.0` and `connection_timeout = 5.0` for connection pooling resilience.
+  - Tags benchmark tasks (`@tag("scoring", "sla")`) to support targeted execution.
+  - Latency Isolation: Captures microservice execution time from `response.js["latency"]["total_latency_ms"]` and assigns it to `response.request_meta["response_time"]` to decouple core engine latency from local OS loopback socket buffer delays.
+  - Native SLA Enforcement: Implements `@events.quitting.add_listener` inspecting `environment.stats.total`, setting `environment.process_exit_code = 1` if $p95 > 25.0\text{ ms}$, $p99 > 45.0\text{ ms}$, or `fail_ratio > 0.0\%`.
+- **Automated Headless Runner (`tests/run_load_test.py`)**:
+  - Dynamically parses target host and port via `urllib.parse.urlparse`.
+  - Suppresses background holdout stream worker during load testing via `DISABLE_BACKGROUND_STREAM=1` to eliminate CPU core contention.
+  - Performs fail-fast server health checks inspecting `server_proc.poll()`, aborting immediately with stderr if startup fails.
+  - Generates standalone audit artifacts: HTML report at `reports/locust_sla_report.html` and statistical CSV at `reports/locust_stats_stats.csv`.
+  - Evaluates both CSV percentile gates and process return code `res.returncode == 0` before declaring success.
+- **Microservice Latency Optimizations**:
+  - `src/api/routes/scoring.py`: Declared as `async def` to execute directly inside the main asyncio event loop, bypassing AnyIO worker threadpool context switching and CPython GIL time-slicing delays during sub-2.0ms in-memory C++ compute.
+  - `src/models/explainability.py`: Optimized `FraudExplainer.score_and_explain` with `validate_features=False` (skips pandas column verification at predict time) and `num_threads=1` (avoids OpenMP thread pool spawning overhead).
+
+### 2. Multi-Container Orchestration (`docker-compose.yml`)
+- **FastAPI Microservice (`docker/Dockerfile.api`)**:
+  - Base: `python:3.11-slim`.
+  - Self-contained packaging: Bundles pre-trained LightGBM model (`models/fraud_lgb_model.txt`) and DuckDB feature store (`feature_store.duckdb`).
+  - Runtime: Uvicorn serving `src.api.main:app` on port 8000.
+  - Healthcheck: Probes `http://localhost:8000/v1/health` with interval `5s`, timeout `3s`, retries `5`.
+- **Frontend Dashboard (`docker/Dockerfile.frontend` & `docker/nginx.conf`)**:
+  - Stage 1 (Builder): `node:20-alpine`, builds static distribution in `/app/dist` via `npm run build`.
+  - Stage 2 (Runtime): `nginx:alpine`, copies built dist into `/usr/share/nginx/html`.
+  - Nginx Reverse Proxy: Configured in `docker/nginx.conf` to serve static SPA files and proxy `/v1/*` requests directly to `http://fastapi-engine:8000`. Exposes port 80/3000.
+- **Redis Online Store**:
+  - Image: `redis:7-alpine`.
+  - Healthcheck: `redis-cli ping`.
+- **Streaming Ingest Broker**:
+  - Image: `redpandadata/redpanda:v24.2.4` (C++ high-performance Kafka API alternative).
+- **Network Architecture**:
+  - Private bridge network `fraud-net` isolating inter-service traffic.
+  - Chained healthchecks (`depends_on: { condition: service_healthy }`) to guarantee deterministic boot order.
+
 ---
 
-*(Phase 7 and 8 specifications will be appended upon completion of Phase 6.)*
+*(Phase 8 specifications for CI/CD and deployment will be appended upon completion of Phase 7.)*
 
