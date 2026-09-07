@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AlertCircle, ShieldAlert, CheckCircle2, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, ShieldAlert, CheckCircle2, ShieldCheck, Target } from 'lucide-react';
 import type { TransactionItem } from '../types';
 
 interface PolicyActionBoxProps {
@@ -13,6 +13,16 @@ export const PolicyActionBox: React.FC<PolicyActionBoxProps> = ({
 }) => {
   const [submitting, setSubmitting] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
+  const [highlightKey, setHighlightKey] = useState<number | null>(null);
+
+  // Trigger attention highlight when selectedTx changes
+  useEffect(() => {
+    if (selectedTx) {
+      setHighlightKey(selectedTx.transaction_id);
+      const timer = setTimeout(() => setHighlightKey(null), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedTx?.transaction_id]);
 
   const handleFeedback = async (isChargeback: boolean) => {
     if (!selectedTx) return;
@@ -29,10 +39,15 @@ export const PolicyActionBox: React.FC<PolicyActionBoxProps> = ({
   };
 
   return (
-    <div className="bg-white border border-[#e9ebe3] rounded-2xl p-6 shadow-xs hover:shadow-md transition-all duration-300">
-      <h2 className="text-lg font-bold text-[#202318] mb-3 tracking-tight">
-        Active Policy Interventions
-      </h2>
+    <div className={`bg-white border rounded-2xl p-6 shadow-xs hover:shadow-md transition-all duration-300 ${
+      highlightKey ? 'border-[#006323] ring-2 ring-[#006323]/20 shadow-md' : 'border-[#e9ebe3]'
+    }`}>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-[#202318] tracking-tight flex items-center gap-2">
+          <Target className="w-4 h-4 text-[#006323]" />
+          Selected Transaction Forensics & Actions
+        </h2>
+      </div>
 
       {selectedTx ? (
         <div className="space-y-4">
