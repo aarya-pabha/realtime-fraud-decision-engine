@@ -23,10 +23,10 @@ async def lifespan(app: FastAPI):
     app.state.start_time = time.time()
     
     # 1. Pre-warm SHAP TreeExplainer & Shared LightGBM Booster
-    model_path = "models/fraud_lgb_model.txt"
+    model_path = os.environ.get("MODEL_PATH", "models/fraud_lgb_model.txt")
     if not os.path.exists(model_path):
         # Fallback to parent path if running from subfolder
-        model_path = os.path.join("..", "models", "fraud_lgb_model.txt")
+        model_path = os.path.join("..", model_path)
         
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model file not found at {model_path}! Train model first via train_lgb.py.")

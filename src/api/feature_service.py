@@ -46,8 +46,16 @@ class FeatureService:
         # Initialize Feast FeatureStore if repo exists and Redis is active
         if self.redis_online and os.path.exists(feature_store_repo):
             try:
-                from feast import FeatureStore
-                self.feature_store = FeatureStore(repo_path=feature_store_repo)
+                from feast import FeatureStore, RepoConfig
+                registry_path = os.path.join(feature_store_repo, "data", "registry.db")
+                repo_config = RepoConfig(
+                    project="transaction_fraud_store",
+                    registry=registry_path,
+                    provider="local",
+                    offline_store="file",
+                    online_store={"type": "redis", "connection_string": f"{redis_host}:{redis_port}"}
+                )
+                self.feature_store = FeatureStore(config=repo_config)
             except Exception as e:
                 print(f"[FeatureService] Feast FeatureStore init skipped: {e}")
                 self.feature_store = None

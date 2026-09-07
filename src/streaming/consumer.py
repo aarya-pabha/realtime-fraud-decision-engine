@@ -13,7 +13,7 @@ import numpy as np
 
 from src.api.schemas import TransactionPayload
 from src.api.feature_service import FeatureService
-from src.models.explainability import FraudExplainer
+from src.models.explainability import FraudExplainer, DEFAULT_APPROVE_REASON_CODES
 from src.models.cost_router import DynamicCostRouter
 from src.streaming.producer import STREAM_INCOMING_QUEUE
 
@@ -156,17 +156,29 @@ class StreamingScoringConsumer:
         # 2. Online feature hydration & transformation
         feature_df, hydration_ms = self.feature_service.transform_payload_to_feature_vector(payload)
         
-        # 3. Single-pass unified C++ inference & TreeSHAP localized attribution
-        fraud_prob, reason_codes, inference_ms = self.explainer.score_and_explain(feature_df)
+        # 3. Pure LightGBM probability inference (<3.5ms)
+        fraud_prob, inference_ms = self.explainer.predict_proba(feature_df)
         
-        # 4. Bayesian dynamic cost decisioning
+        # 4. Decision routing (Option 3: Conformal Risk Control by default)
         t_route = time.perf_counter()
+        routing_mode = os.environ.get("ROUTING_MODE", "crc")
+        crc_tau_star = float(os.environ.get("CRC_TAU_STAR", "0.0817"))
         route_res = self.cost_router.route_transaction(
             fraud_prob=fraud_prob,
-            amount=float(payload.TransactionAmt)
+            amount=float(payload.TransactionAmt),
+            mode=routing_mode,
+            crc_tau_star=crc_tau_star
         )
         routing_ms = (time.perf_counter() - t_route) * 1000.0
-        total_latency_ms = (time.perf_counter() - t0) * 1000.0
+
+        
+        # 5. Conditional Adverse-Action TreeSHAP attribution
+        # EMVCo/FCRA adverse action: only compute expensive TreeSHAP on declines and 3DS step-ups
+        if route_res.action in ("STEP_UP_3DS", "DECLINE"):
+            reason_codes, shap_ms = self.explainer.explain(feature_df)
+        else:
+            reason_codes = DEFAULT_APPROVE_REASON_CODES
+            shap_ms = 0.0
 
         tx_id = payload.TransactionID or int(time.time() * 1000) % 10000000
         primary_reason = reason_codes[0] if reason_codes else "Baseline Normal Activity"
@@ -191,8 +203,9 @@ class StreamingScoringConsumer:
             "tau_decline": route_res.tau_decline,
             "hydration_ms": round(hydration_ms, 2),
             "inference_ms": round(inference_ms, 2),
+            "shap_ms": round(shap_ms, 2),
             "routing_ms": round(routing_ms, 3),
-            "total_latency_ms": round(hydration_ms + inference_ms + routing_ms, 2),
+            "total_latency_ms": round(hydration_ms + inference_ms + shap_ms + routing_ms, 2),
             "timestamp": time.strftime("%H:%M:%S")
         }
 

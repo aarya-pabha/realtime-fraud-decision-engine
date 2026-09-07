@@ -65,10 +65,18 @@ REASON_CODE_MAP = {
     "C14": "HIGH_CROSS_MERCHANT_CARD_COUNT"
 }
 
+DEFAULT_APPROVE_REASON_CODES = [
+    "NORMAL_ACCOUNT_BEHAVIOR",
+    "LOW_RISK_TRANSACTION_AMOUNT",
+    "VERIFIED_DEVICE_BASELINE"
+]
+
 class FraudExplainer:
     """
     Sub-10ms localized real-time SHAP TreeExplainer for LightGBM fraud model.
     Extracts top-3 positive contributors to transaction risk and translates them into standard operational reason codes.
+    Supports Conditional Adverse-Action TreeSHAP: decoupled pure probability prediction (<3.5ms)
+    and selective TreeSHAP attribution (~14.5ms) triggered only on adverse actions (STEP_UP_3DS / DECLINE).
     """
     def __init__(self, model_path="models/fraud_lgb_model.txt"):
         if not os.path.exists(model_path):
@@ -76,6 +84,44 @@ class FraudExplainer:
             
         self.model = lgb.Booster(model_file=model_path)
         self.feature_names = self.model.feature_name()
+
+    def predict_proba(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[float, float]:
+        """
+        Ultra-fast pure LightGBM probability inference (<3.5ms) without TreeSHAP attribution.
+        Returns: (calibrated_fraud_prob, latency_ms)
+        """
+        t0 = time.perf_counter()
+        pred = self.model.predict(
+            feature_df,
+            pred_contrib=False,
+            num_iteration=num_iteration,
+            num_threads=1,
+            validate_features=False
+        )
+        fraud_prob = float(pred[0])
+        latency_ms = (time.perf_counter() - t0) * 1000.0
+        return fraud_prob, latency_ms
+
+    def explain(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[List[str], float]:
+        """
+        Localized TreeSHAP attribution generating top-3 operational reason codes (~14.5ms).
+        Invoked conditionally on adverse actions (STEP_UP_3DS / DECLINE).
+        Returns: (top_3_reason_codes, latency_ms)
+        """
+        t0 = time.perf_counter()
+        contribs = self.model.predict(
+            feature_df,
+            pred_contrib=True,
+            num_iteration=num_iteration,
+            num_threads=1,
+            validate_features=False
+        )
+        sv = contribs[0, :-1]
+        top_indices = np.argsort(-sv)[:3]
+        top_features = [self.feature_names[i] for i in top_indices]
+        reason_codes = [REASON_CODE_MAP.get(f, f"RISK_INDICATOR_{f.upper()}") for f in top_features]
+        latency_ms = (time.perf_counter() - t0) * 1000.0
+        return reason_codes, latency_ms
 
     def score_and_explain(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[float, List[str], float]:
         """

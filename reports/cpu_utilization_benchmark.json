@@ -1,0 +1,36 @@
+{
+  "with_option_1": {
+    "case": "WITH_OPTION_1",
+    "enable_cond_shap": "1",
+    "requests": 1412,
+    "rps": 48.40933550334449,
+    "failures": 0.0,
+    "p50": 7.0,
+    "p90": 21.0,
+    "p95": 22.0,
+    "p99": 22.0,
+    "max": 26.0,
+    "avg_pod_cpu_pct": 30.80775862068965,
+    "peak_pod_cpu_pct": 48.45,
+    "cores_utilized": 0.616155172413793,
+    "headroom_pct": 69.19224137931035,
+    "sample_count": 58
+  },
+  "without_option_1": {
+    "case": "WITHOUT_OPTION_1",
+    "enable_cond_shap": "0",
+    "requests": 1381,
+    "rps": 47.377186091474904,
+    "failures": 0.0,
+    "p50": 20.0,
+    "p90": 22.0,
+    "p95": 22.0,
+    "p99": 24.0,
+    "max": 26.0,
+    "avg_pod_cpu_pct": 50.152459016393436,
+    "peak_pod_cpu_pct": 81.3,
+    "cores_utilized": 1.0030491803278687,
+    "headroom_pct": 49.847540983606564,
+    "sample_count": 61
+  }
+}

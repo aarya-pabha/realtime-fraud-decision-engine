@@ -28,6 +28,32 @@ def check_sla_thresholds(environment, **kwargs):
                      stats.fail_ratio * 100)
         environment.process_exit_code = 0
 
+_HOLDOUT_CACHE = []
+
+def _load_real_holdout_records():
+    global _HOLDOUT_CACHE
+    if _HOLDOUT_CACHE:
+        return _HOLDOUT_CACHE
+    try:
+        import duckdb
+        import os
+        db_path = "feature_store.duckdb"
+        if not os.path.exists(db_path) and os.path.exists(os.path.join("..", db_path)):
+            db_path = os.path.join("..", db_path)
+        if os.path.exists(db_path):
+            con = duckdb.connect(db_path, read_only=True)
+            query = """
+            SELECT t.TransactionAmt, t.ProductCD, t.card1, t.card2, t.card3, t.card4, t.card5, t.card6,
+                   t.addr1, t.addr2, t.P_emaildomain, t.R_emaildomain, t.D1, t.D2, t.D15,
+                   t.C1, t.C2, t.C3, t.C4, t.C5, t.C6, t.C7, t.C8, t.C9, t.C10, t.C11, t.C12, t.C13, t.C14
+            FROM transactions t WHERE t.TransactionDT >= 13046400 LIMIT 2000;
+            """
+            _HOLDOUT_CACHE = con.execute(query).to_arrow_table().to_pylist()
+            con.close()
+    except Exception:
+        _HOLDOUT_CACHE = []
+    return _HOLDOUT_CACHE
+
 class FraudEngineUser(FastHttpUser):
     """
     High-throughput Locust load testing client for the Real-Time Fraud Engine.
@@ -40,6 +66,12 @@ class FraudEngineUser(FastHttpUser):
 
     def generate_payload(self) -> dict:
         """Generate diverse, authentic IEEE-CIS transaction vectors."""
+        cache = _load_real_holdout_records()
+        if cache:
+            rec = dict(random.choice(cache))
+            rec["TransactionAmt"] = float(rec["TransactionAmt"])
+            return rec
+
         scenario = random.choices(
             ["standard", "micro", "high_value", "velocity_burst", "foreign_travel"],
             weights=[60, 20, 10, 5, 5],

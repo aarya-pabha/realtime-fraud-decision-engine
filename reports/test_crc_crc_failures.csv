@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,/v1/score,CatchResponseError('[Errno 10061] [WinError 10061] No connection could be made because the target machine actively refused it.'),68,2026-09-07T21:02:19Z,2026-09-07T21:02:24Z

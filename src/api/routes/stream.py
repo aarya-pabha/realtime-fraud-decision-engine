@@ -12,6 +12,7 @@ from src.api.schemas import TransactionPayload, ScoringResponse
 from src.api.dependencies import ScoringEngineContainer, get_scoring_engine
 from src.streaming.consumer import GLOBAL_RING_BUFFER
 from src.frontend.drift_service import DriftMonitoringService
+from src.models.explainability import DEFAULT_APPROVE_REASON_CODES
 
 router = APIRouter(prefix="/v1/stream", tags=["Streaming Telemetry & Forensics"])
 drift_service = DriftMonitoringService()
@@ -137,12 +138,27 @@ def simulate_scenario(
     # 1. Feature Hydration
     feature_df, hydration_ms = engine.feature_service.transform_payload_to_feature_vector(payload)
     
-    # 2. Inference & TreeSHAP Attribution
-    fraud_prob, reason_codes, inference_ms = engine.explainer.score_and_explain(feature_df)
+    # 2. Pure LightGBM Probability Inference
+    fraud_prob, inference_ms = engine.explainer.predict_proba(feature_df)
     
-    # 3. Dynamic Value-Aware Cost Router Decision
+    # 3. Decision Router (Option 3: Conformal Risk Control by default)
     amt = float(payload.TransactionAmt)
-    routing_result = engine.cost_router.route_transaction(fraud_prob=fraud_prob, amount=amt)
+    routing_mode = os.environ.get("ROUTING_MODE", "crc")
+    crc_tau_star = float(os.environ.get("CRC_TAU_STAR", "0.0817"))
+    routing_result = engine.cost_router.route_transaction(
+        fraud_prob=fraud_prob,
+        amount=amt,
+        mode=routing_mode,
+        crc_tau_star=crc_tau_star
+    )
+
+    
+    # 4. Conditional TreeSHAP Attribution
+    if routing_result.action in ("STEP_UP_3DS", "DECLINE"):
+        reason_codes, shap_ms = engine.explainer.explain(feature_df)
+    else:
+        reason_codes = DEFAULT_APPROVE_REASON_CODES
+        shap_ms = 0.0
     
     total_latency_ms = (time.perf_counter() - total_start) * 1000.0
     tx_id = payload.TransactionID or int(time.time() * 1000) % 10000000

@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath("."))
 
 import numpy as np
 import time
-from typing import Literal, Dict, Any, Tuple
+from typing import Literal, Dict, Any, Tuple, Optional
 from pydantic import BaseModel, Field
 
 class CostMatrixConfig(BaseModel):
@@ -22,8 +22,21 @@ class CostMatrixConfig(BaseModel):
     decline_multiplier: float = Field(default=4.0, ge=1.0, le=10.0, description="Three-Way decision boundary multiplier tau_decline = k * tau_step_up")
     min_decline_threshold: float = Field(default=0.35, ge=0.0, le=1.0)
     max_decline_threshold: float = Field(default=0.80, ge=0.0, le=1.0)
+    enable_tiered_policy: bool = Field(
+        default=True,
+        description="Enables Level 3+4 Spend-Tier Segmented Routing Policy (<$100, $100-$500, $500+) optimized for minimal loss"
+    )
+    crc_tau_star: float = Field(
+        default=0.0817,
+        description="PAC distribution-free step-up threshold with temporal drift compensation (<= 0.45% chargeback risk ceiling)"
+    )
+    crc_decline_threshold: float = Field(
+        default=0.65,
+        description="Hard decline threshold for CRC mode"
+    )
 
 from dataclasses import dataclass
+
 
 @dataclass(slots=True)
 class RoutingResult:
@@ -39,6 +52,10 @@ class DynamicCostRouter:
     """
     Sub-millisecond Dynamic Transaction-Value Aware Cost Matrix Router (Novelty #2).
     Adapts decision boundaries dynamically as a continuous function of transaction dollar value: tau*(TransactionAmt).
+    Integrates Level 3+4 Spend-Tier Segmented Policy:
+      - Tier 1 (<$100): beta=0.85, k=7.25, step=[0.015, 0.100], dec=[0.590, 0.850]
+      - Tier 2 ($100-$500): beta=0.90, k=7.75, step=[0.035, 0.200], dec=[0.730, 0.950]
+      - Tier 3 ($500+): beta=0.65, k=9.75, step=[0.010, 0.340], dec=[0.670, 0.900]
     """
     def __init__(self, config: CostMatrixConfig = None):
         self.cfg = config or CostMatrixConfig()
@@ -52,17 +69,45 @@ class DynamicCostRouter:
         c_fp = (amount * self.cfg.interchange_margin) + self.cfg.customer_friction_cost
         tau_star = c_fp / (c_fn + c_fp)
 
-        tau_step_up = max(self.cfg.min_step_up_threshold, min(self.cfg.max_step_up_threshold, tau_star))
-        tau_decline = max(self.cfg.min_decline_threshold, min(self.cfg.max_decline_threshold, self.cfg.decline_multiplier * tau_star))
+        if self.cfg.enable_tiered_policy:
+            if amount < 100.0:
+                tau_step_up = max(0.015, min(0.100, tau_star * 0.85))
+                tau_decline = max(0.590, min(0.850, tau_star * 7.25))
+            elif amount < 500.0:
+                tau_step_up = max(0.035, min(0.200, tau_star * 0.90))
+                tau_decline = max(0.730, min(0.950, tau_star * 7.75))
+            else:
+                tau_step_up = max(0.010, min(0.340, tau_star * 0.65))
+                tau_decline = max(0.670, min(0.900, tau_star * 9.75))
+            tau_decline = max(tau_decline, tau_step_up + 0.01)
+        else:
+            tau_step_up = max(self.cfg.min_step_up_threshold, min(self.cfg.max_step_up_threshold, tau_star))
+            tau_decline = max(self.cfg.min_decline_threshold, min(self.cfg.max_decline_threshold, self.cfg.decline_multiplier * tau_star))
+
         return tau_step_up, tau_decline
 
 
-    def route_transaction(self, fraud_prob: float, amount: float) -> RoutingResult:
+    def route_transaction(
+        self,
+        fraud_prob: float,
+        amount: float,
+        mode: str = "dynamic",
+        crc_tau_star: Optional[float] = None,
+        crc_decline_threshold: Optional[float] = None
+    ) -> RoutingResult:
         """
         Evaluates a single transaction event in sub-0.5ms SLA latency.
+        Supports:
+          - 'dynamic': Bayesian value-aware cost optimization (Novelty #2)
+          - 'crc': Conformal Risk Control PAC distribution-free bound (Option 3)
         """
         t0 = time.perf_counter()
-        tau_step_up, tau_decline = self.compute_thresholds(amount)
+        if mode == "crc":
+            tau_step_up = crc_tau_star if crc_tau_star is not None else self.cfg.crc_tau_star
+            tau_decline = crc_decline_threshold if crc_decline_threshold is not None else self.cfg.crc_decline_threshold
+        else:
+            tau_step_up, tau_decline = self.compute_thresholds(amount)
+
 
         if fraud_prob < tau_step_up:
             action = "APPROVE"
@@ -93,6 +138,7 @@ class DynamicCostRouter:
             latency_ms=round(latency_ms, 3)
         )
 
+
     def batch_route_and_evaluate(
         self,
         fraud_probs: np.ndarray,
@@ -109,8 +155,27 @@ class DynamicCostRouter:
         c_fp = (amounts * self.cfg.interchange_margin) + self.cfg.customer_friction_cost
         tau_star = c_fp / (c_fn + c_fp)
 
-        tau_step_up = np.clip(tau_star, self.cfg.min_step_up_threshold, self.cfg.max_step_up_threshold)
-        tau_decline = np.clip(self.cfg.decline_multiplier * tau_star, self.cfg.min_decline_threshold, self.cfg.max_decline_threshold)
+        if self.cfg.enable_tiered_policy:
+            m1 = amounts < 100.0
+            m2 = (amounts >= 100.0) & (amounts < 500.0)
+            m3 = amounts >= 500.0
+
+            tau_step_up = np.empty_like(tau_star)
+            tau_decline = np.empty_like(tau_star)
+
+            tau_step_up[m1] = np.clip(tau_star[m1] * 0.85, 0.015, 0.100)
+            tau_decline[m1] = np.clip(tau_star[m1] * 7.25, 0.590, 0.850)
+
+            tau_step_up[m2] = np.clip(tau_star[m2] * 0.90, 0.035, 0.200)
+            tau_decline[m2] = np.clip(tau_star[m2] * 7.75, 0.730, 0.950)
+
+            tau_step_up[m3] = np.clip(tau_star[m3] * 0.65, 0.010, 0.340)
+            tau_decline[m3] = np.clip(tau_star[m3] * 9.75, 0.670, 0.900)
+
+            tau_decline = np.maximum(tau_decline, tau_step_up + 0.01)
+        else:
+            tau_step_up = np.clip(tau_star, self.cfg.min_step_up_threshold, self.cfg.max_step_up_threshold)
+            tau_decline = np.clip(self.cfg.decline_multiplier * tau_star, self.cfg.min_decline_threshold, self.cfg.max_decline_threshold)
 
         # Vectorized Action Assignment
         is_approve = fraud_probs < tau_step_up

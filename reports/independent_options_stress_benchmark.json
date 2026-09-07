@@ -1,0 +1,62 @@
+[
+  {
+    "request_count": 376,
+    "failure_count": 0,
+    "failure_pct": 0.0,
+    "rps": 19.822854637430012,
+    "p50": 21.0,
+    "p90": 22.0,
+    "p95": 22.0,
+    "p99": 25.0,
+    "max": 27.0,
+    "name": "0. Baseline (Production Master)",
+    "duration": "20s",
+    "users": 40,
+    "elapsed_sec": 21.2
+  },
+  {
+    "request_count": 372,
+    "failure_count": 0,
+    "failure_pct": 0.0,
+    "rps": 19.459480687101227,
+    "p50": 21.0,
+    "p90": 22.0,
+    "p95": 23.0,
+    "p99": 26.0,
+    "max": 45.0,
+    "name": "1. Option 1 (Conditional TreeSHAP)",
+    "duration": "20s",
+    "users": 40,
+    "elapsed_sec": 21.3
+  },
+  {
+    "request_count": 373,
+    "failure_count": 0,
+    "failure_pct": 0.0,
+    "rps": 19.52425063636705,
+    "p50": 22.0,
+    "p90": 26.0,
+    "p95": 27.0,
+    "p99": 31.0,
+    "max": 49.0,
+    "name": "2. Option 2 (Temporal Decay 90d)",
+    "duration": "20s",
+    "users": 40,
+    "elapsed_sec": 21.3
+  },
+  {
+    "request_count": 374,
+    "failure_count": 0,
+    "failure_pct": 0.0,
+    "rps": 19.587473569292342,
+    "p50": 21.0,
+    "p90": 27.0,
+    "p95": 29.0,
+    "p99": 41.0,
+    "max": 45.0,
+    "name": "3. Option 3 (Conformal Risk Control)",
+    "duration": "20s",
+    "users": 40,
+    "elapsed_sec": 21.4
+  }
+]
