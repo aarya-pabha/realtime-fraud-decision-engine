@@ -6,8 +6,6 @@ import { AnalyticsChart } from './components/AnalyticsChart';
 import { StreamFeed } from './components/StreamFeed';
 import { PolicyActionBox } from './components/PolicyActionBox';
 import { ProgressDonut } from './components/ProgressDonut';
-import { RiskDrivers } from './components/RiskDrivers';
-import { TelemetryCards } from './components/TelemetryCards';
 import { ScenarioModal } from './components/ScenarioModal';
 import { SimulatorView } from './components/SimulatorView';
 import { DriftView } from './components/DriftView';
@@ -35,7 +33,6 @@ export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
   const [kpis, setKpis] = useState<StreamKpis>(DEFAULT_KPIS);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [streamOnline, setStreamOnline] = useState<boolean>(false);
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(false);
 
@@ -67,14 +64,13 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     fetchStreamData();
-    if (isPaused) return;
 
     const interval = setInterval(() => {
       fetchStreamData();
     }, 900);
 
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, []);
 
   // Handle transaction simulation
   const handleSimulate = async (payload: SimulationPayload) => {
@@ -147,6 +143,8 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         streamOnline={streamOnline}
+        avgLatencyMs={kpis.avg_latency_ms}
+        p95LatencyMs={kpis.p95_latency_ms}
       />
 
       {/* Main Content Area */}
@@ -154,7 +152,7 @@ export const App: React.FC = () => {
         <Header
           onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
           onRefreshStream={fetchStreamData}
-          isStreaming={!isPaused}
+          isStreaming={streamOnline}
         />
 
         {/* Tab 1: Full Tasko Dashboard View */}
@@ -163,11 +161,10 @@ export const App: React.FC = () => {
             {/* 4 Stat KPI Bento Cards */}
             <StatCards kpis={kpis} />
 
-            {/* Middle Section: 2/3 Left (Analytics + Stream) vs 1/3 Right (Policy + Donut) */}
+            {/* Middle Section: 2/3 Left (Stream) vs 1/3 Right (Policy Forensics + Donut) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column (2/3 width) */}
-              <div className="lg:col-span-2 space-y-6">
-                <AnalyticsChart kpis={kpis} />
+              <div className="lg:col-span-2">
                 <StreamFeed
                   transactions={transactions}
                   selectedTxId={selectedTx ? selectedTx.transaction_id : null}
@@ -185,17 +182,8 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Bottom 3-Card Grid (1/3, 1/3, 1/3) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <RiskDrivers />
-              <TelemetryCards
-                kpis={kpis}
-                isPaused={isPaused}
-                onTogglePause={() => setIsPaused(!isPaused)}
-                onResetBuffer={fetchStreamData}
-                onSimulatePreset={handleSimulatePreset}
-              />
-            </div>
+            {/* Historical Analytics Chart (Full Width at Bottom) */}
+            <AnalyticsChart kpis={kpis} />
           </div>
         )}
 
