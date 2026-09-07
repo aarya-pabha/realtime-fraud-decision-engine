@@ -1,12 +1,12 @@
 import React from 'react';
 import { ShieldCheck, AlertTriangle, ShieldX, Clock, DollarSign, Activity } from 'lucide-react';
 import { StatusPill } from './StatusPill';
-import type { TransactionItem } from '../types';
+import type { TransactionItem, SimulationPayload } from '../types';
 
 interface SimulatorViewProps {
   selectedTx: TransactionItem | null;
   onSimulatePreset: (preset: 'attack' | 'highval' | 'normal') => void;
-  onCustomSimulate?: (payload: Record<string, unknown>) => void;
+  onCustomSimulate?: (payload: SimulationPayload) => void;
 }
 
 export const SimulatorView: React.FC<SimulatorViewProps> = ({
