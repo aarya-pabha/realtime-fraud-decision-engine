@@ -71,12 +71,12 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
           {isExpanded ? (
             <>
               <ChevronUp className="w-3.5 h-3.5 text-[#707367]" />
-              <span>Show Recent 3</span>
+              <span>View Less</span>
             </>
           ) : (
             <>
               <ChevronDown className="w-3.5 h-3.5 text-[#707367]" />
-              <span>View All ({transactions.length})</span>
+              <span>View More</span>
             </>
           )}
         </button>

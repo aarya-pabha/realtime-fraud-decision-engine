@@ -47,9 +47,10 @@ export const App: React.FC = () => {
       if (resRecent.ok) {
         const dataRecent = await resRecent.json();
         setTransactions(dataRecent);
-        if (!selectedTx && dataRecent.length > 0) {
-          setSelectedTx(dataRecent[0]);
-        }
+        setSelectedTx((prev) => {
+          if (prev) return prev;
+          return dataRecent.length > 0 ? dataRecent[0] : null;
+        });
         setStreamOnline(true);
       }
 
@@ -59,6 +60,19 @@ export const App: React.FC = () => {
       }
     } catch {
       setStreamOnline(false);
+    }
+  };
+
+  // Handle stream replay
+  const handleReplayStream = async () => {
+    try {
+      const res = await fetch('/v1/stream/replay', { method: 'POST' });
+      if (res.ok) {
+        setSelectedTx(null);
+        await fetchStreamData();
+      }
+    } catch (err) {
+      console.error('Replay error:', err);
     }
   };
 
@@ -151,8 +165,7 @@ export const App: React.FC = () => {
       <main className="flex-1 ml-64 p-6 lg:p-8 max-w-[1600px]">
         <Header
           onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-          onRefreshStream={fetchStreamData}
-          isStreaming={streamOnline}
+          onReplayStream={handleReplayStream}
         />
 
         {/* Tab 1: Full Tasko Dashboard View */}

@@ -52,6 +52,17 @@ class ScoringRingBuffer:
                 
             self.latencies.append(float(item.get("total_latency_ms", 0.0)))
 
+    def reset(self):
+        with self.lock:
+            self.buffer.clear()
+            self.total_processed = 0
+            self.approved_count = 0
+            self.step_up_count = 0
+            self.declined_count = 0
+            self.total_amount = 0.0
+            self.prevented_fraud_amount = 0.0
+            self.latencies.clear()
+
     def get_recent(self, limit: int = 25) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.buffer)[:limit]

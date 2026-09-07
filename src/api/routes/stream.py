@@ -185,6 +185,32 @@ def simulate_scenario(
     GLOBAL_RING_BUFFER.append(item)
     return item
 
+@router.post("/replay", status_code=status.HTTP_200_OK)
+def replay_stream() -> Dict[str, Any]:
+    """
+    Resets the holdout stream replay back to transaction #0, clears the telemetry buffer,
+    and re-seeds with the initial batch of holdout transactions.
+    """
+    global _HOLDOUT_INDEX, _HOLDOUT_CACHE
+    _HOLDOUT_INDEX = 0
+    GLOBAL_RING_BUFFER.reset()
+    if not _HOLDOUT_CACHE:
+        _HOLDOUT_CACHE = _load_holdout_batch()
+    consumer = _get_consumer()
+    for _ in range(min(10, len(_HOLDOUT_CACHE))):
+        if _HOLDOUT_INDEX < len(_HOLDOUT_CACHE):
+            rec = _HOLDOUT_CACHE[_HOLDOUT_INDEX]
+            _HOLDOUT_INDEX += 1
+            try:
+                consumer.score_single_event(rec)
+            except Exception as e:
+                print(f"[Replay Seed Error] {e}")
+    return {
+        "status": "replayed",
+        "message": "Stream replayed from holdout index 0",
+        "total_seeded": min(10, len(_HOLDOUT_CACHE))
+    }
+
 @router.get("/drift", status_code=status.HTTP_200_OK)
 def get_drift_metrics() -> Dict[str, Any]:
     """Returns current data and prediction drift report via Evidently AI."""

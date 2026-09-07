@@ -44,3 +44,16 @@ def test_stream_simulate(client):
     assert "action" in data
     assert "fraud_probability" in data
     assert "reason_codes" in data
+
+def test_stream_replay(client):
+    res = client.post("/v1/stream/replay")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "replayed"
+    assert "total_seeded" in data
+
+    # Verify buffer contains fresh items starting from index 0
+    res_recent = client.get("/v1/stream/recent?limit=5")
+    assert res_recent.status_code == 200
+    items = res_recent.json()
+    assert len(items) > 0
