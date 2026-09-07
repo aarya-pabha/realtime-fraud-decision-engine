@@ -1,5 +1,5 @@
-import React from 'react';
-import { Filter, ChevronRight, ShieldCheck, AlertTriangle, ShieldX } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronRight, ShieldCheck, AlertTriangle, ShieldX, ChevronDown, ChevronUp } from 'lucide-react';
 import type { TransactionItem } from '../types';
 
 interface StreamFeedProps {
@@ -13,6 +13,8 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
   selectedTxId,
   onSelectTransaction,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const getActionChip = (action: string) => {
     switch (action) {
       case 'APPROVE':
@@ -49,6 +51,8 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
     }
   };
 
+  const displayedTransactions = isExpanded ? transactions : transactions.slice(0, 3);
+
   return (
     <div className="bg-white border border-[#e9ebe3] rounded-2xl p-6 shadow-xs hover:shadow-md transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
@@ -57,12 +61,24 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
             Recent Stream Forensics
           </h2>
           <p className="text-xs text-[#707367]">
-            Click any payment row to inspect attribution and submit ground-truth chargeback feedback
+            Click any row to inspect attribution and submit ground-truth chargeback feedback
           </p>
         </div>
-        <button className="h-8 px-3 rounded-lg border border-[#e9ebe3] text-xs font-semibold text-[#202318] hover:bg-[#f1f3ee] flex items-center gap-1.5 transition-all cursor-pointer">
-          <Filter className="w-3.5 h-3.5 text-[#707367]" />
-          <span>Filter</span>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="h-8 px-3 rounded-lg border border-[#e9ebe3] text-xs font-semibold text-[#202318] hover:bg-[#f1f3ee] flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="w-3.5 h-3.5 text-[#707367]" />
+              <span>Show Recent 3</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-3.5 h-3.5 text-[#707367]" />
+              <span>View All ({transactions.length})</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -72,7 +88,7 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
             Waiting for live transactions from Redpanda stream...
           </div>
         ) : (
-          transactions.map((tx) => {
+          displayedTransactions.map((tx) => {
             const isSelected = selectedTxId === tx.transaction_id;
             return (
               <div
@@ -80,7 +96,7 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
                 onClick={() => onSelectTransaction(tx)}
                 className={`flex items-center justify-between p-3 rounded-xl transition-all duration-200 cursor-pointer border ${
                   isSelected
-                    ? 'bg-[#f3fbf5] border-[#006323] shadow-xs'
+                    ? 'bg-[#f3fbf5] border-[#006323] ring-2 ring-[#006323]/20 shadow-xs'
                     : 'bg-white border-transparent hover:bg-[#f8f9f5] hover:border-[#e9ebe3]'
                 }`}
               >
