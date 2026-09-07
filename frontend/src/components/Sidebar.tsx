@@ -3,8 +3,7 @@ import {
   LayoutDashboard, 
   SquareCheckBig, 
   ShieldAlert, 
-  Settings, 
-  Terminal
+  ShieldCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -18,21 +17,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, strea
     <aside className="w-64 bg-[#f8f9f5] border-r border-[#e9ebe3] p-5 h-screen flex flex-col justify-between fixed top-0 left-0 z-30 select-none">
       <div>
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 mb-8 px-1">
-          <div className="w-8 h-8 rounded-full bg-[#006323] flex items-center justify-center relative shadow-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-white absolute" style={{ top: '30%', left: '30%' }} />
-            <div className="w-1.5 h-1.5 rounded-full bg-white absolute" style={{ top: '30%', right: '30%' }} />
-            <div className="w-3 h-1.5 border-b-2 border-white rounded-full absolute bottom-2.5" />
+        <div className="flex items-center gap-3 mb-8 px-1">
+          <div className="w-9 h-9 rounded-xl bg-[#006323] flex items-center justify-center text-white shadow-sm shadow-[#006323]/30">
+            <ShieldCheck className="w-5 h-5" />
           </div>
-          <span className="text-xl font-extrabold text-[#202318] tracking-tight">Tasko <span className="text-[#006323] font-semibold text-sm">FraudOps</span></span>
+          <div className="leading-tight">
+            <span className="text-lg font-extrabold text-[#202318] tracking-tight block">
+              FraudEngine
+            </span>
+            <span className="text-[10px] font-bold text-[#006323] tracking-wide uppercase block">
+              Decision Platform
+            </span>
+          </div>
         </div>
 
         {/* Menu Section */}
-        <div className="mb-6">
+        <div>
           <p className="text-[10px] font-bold text-[#707367] uppercase tracking-wider mb-2.5 px-3">
             Menu
           </p>
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-1.5">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
@@ -45,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, strea
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Dashboard</span>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                 activeTab === 'dashboard' ? 'bg-white/20 text-white' : 'bg-[#e6f7ec] text-[#006323]'
               }`}>
                 Live
@@ -64,7 +68,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, strea
                 <SquareCheckBig className="w-4 h-4" />
                 <span>3DS Simulator</span>
               </div>
-              <span className="text-[10px] font-semibold text-[#707367] bg-[#f1f3ee] px-2 py-0.5 rounded-full">
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                activeTab === 'simulator' ? 'bg-white/20 text-white' : 'bg-[#f1f3ee] text-[#707367]'
+              }`}>
                 Sandbox
               </span>
             </button>
@@ -81,32 +87,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, strea
                 <ShieldAlert className="w-4 h-4" />
                 <span>Drift & Stability</span>
               </div>
-              <span className="text-[10px] font-semibold text-[#707367] bg-[#f1f3ee] px-2 py-0.5 rounded-full">
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                activeTab === 'drift' ? 'bg-white/20 text-white' : 'bg-[#f1f3ee] text-[#707367]'
+              }`}>
                 Evidently
               </span>
             </button>
-          </nav>
-        </div>
-
-        {/* General Section */}
-        <div>
-          <p className="text-[10px] font-bold text-[#707367] uppercase tracking-wider mb-2.5 px-3">
-            General
-          </p>
-          <nav className="flex flex-col gap-1">
-            <a
-              href="http://localhost:8000/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#707367] hover:bg-[#f1f3ee] hover:text-[#202318] transition-all cursor-pointer"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>FastAPI Swagger Docs</span>
-            </a>
-            <div className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#707367] hover:bg-[#f1f3ee] hover:text-[#202318] transition-all cursor-pointer">
-              <Settings className="w-4 h-4" />
-              <span>Engine Settings</span>
-            </div>
           </nav>
         </div>
       </div>
@@ -115,8 +101,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, strea
       <div className="bg-white border border-[#e9ebe3] rounded-2xl p-4 shadow-xs">
         <div className="flex items-center gap-2 mb-1.5">
           <span className="relative flex h-2 w-2">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${streamOnline ? 'bg-[#006323]' : 'bg-amber-500'} opacity-75`}></span>
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${streamOnline ? 'bg-[#006323]' : 'bg-amber-500'}`}></span>
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${streamOnline ? 'bg-[#006323]' : 'bg-amber-500'} opacity-75`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${streamOnline ? 'bg-[#006323]' : 'bg-amber-500'}`} />
           </span>
           <span className="text-[11px] font-extrabold text-[#006323] uppercase tracking-wider">
             {streamOnline ? 'Engine Online' : 'Connecting...'}
