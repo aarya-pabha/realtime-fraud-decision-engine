@@ -45,3 +45,6 @@ frontend/dist/
 # Superpowers temporary artifacts
 .superpowers/
 
+# Temporary reports/screenshots
+reports/*.png
+
