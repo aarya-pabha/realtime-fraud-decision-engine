@@ -1,0 +1,55 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python virtual environments & bytecode
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local data science scratch & notebooks
+notebooks/
+catboost_info/
+mlruns/
+mlruns.db
+reports/*.html
+reports/*.csv
+reports/*.png
+
+# Data science datasets (keep only feature_store.duckdb and sqlite feedback)
+data/raw/
+data/processed/
+data/interim/
+data/external/
+data/*.html
+data/*.parquet
+
+# Local environment secrets & config
+.env
+.env.local
+
+# Frontend build artifacts & dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Tests & Documentation (excluded from runtime container image)
+tests/
+docs/
+decision.md
+memory.md
+GEMINI.md
+pytest.ini
+
+# System files
+.DS_Store
+Thumbs.db
+

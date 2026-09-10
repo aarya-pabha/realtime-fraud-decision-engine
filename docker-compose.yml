@@ -1,0 +1,140 @@
+services:
+  # ============================================================================
+  # 1. In-Memory Online Feature Store (Redis 7)
+  # Sub-5ms online feature hydration for velocity counters
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: fraud-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - fraud-net
+
+  # ============================================================================
+  # 2. C++ High-Performance Kafka API Broker (Redpanda)
+  # Real-time event streaming ingest & alerts dispatch
+  # ============================================================================
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: fraud-redpanda
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - "512M"
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --mode
+      - dev-container
+      - --check=false
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+      - "9644:9644"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - fraud-net
+
+  # ============================================================================
+  # 3. Production Real-Time Fraud Decisioning Engine (FastAPI + LightGBM + SHAP)
+  # Pre-warmed C++ TreeSHAP, Bayesian dynamic router, sub-25ms SLA serving
+  # ============================================================================
+  fastapi-engine:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: fraud-api
+    restart: unless-stopped
+    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "uvloop", "--http", "httptools"]
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CONNECTION_STRING=redis:6379
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
+      - PYTHONUNBUFFERED=1
+      - DISABLE_BACKGROUND_STREAM=${DISABLE_BACKGROUND_STREAM:-0}
+      - ENABLE_CONDITIONAL_SHAP=${ENABLE_CONDITIONAL_SHAP:-1}
+      - ROUTING_MODE=${ROUTING_MODE:-crc}
+      - CRC_TAU_STAR=${CRC_TAU_STAR:-0.0817}
+      - OMP_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - NUMEXPR_NUM_THREADS=1
+      - VECLIB_MAXIMUM_THREADS=1
+      - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/v1/health').status == 200 else 1)"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - fraud-net
+
+  # ============================================================================
+  # 4. Interactive Operations & Forensics Dashboard (React SPA + Nginx)
+  # Tasko/Donezo FinTech operations layout, live telemetry, /v1/ reverse proxy
+  # ============================================================================
+  react-frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: fraud-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      fastapi-engine:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - fraud-net
+
+# Dedicated private bridge network
+networks:
+  fraud-net:
+    name: fraud-net
+    driver: bridge
+
+# Persistent named data volumes
+volumes:
+  redis-data:
+    name: fraud-redis-data
+    driver: local
+  redpanda-data:
+    name: fraud-redpanda-data
+    driver: local

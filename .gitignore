@@ -15,6 +15,9 @@ mlruns/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+htmlcov/
 
 # IDE / OS Files
 .vscode/
@@ -34,4 +37,17 @@ GEMINI.md
 
 # Exploration logs
 catboost_info/
+
+# Frontend dependencies and builds
+frontend/node_modules/
+frontend/dist/
+
+# Superpowers temporary artifacts
+.superpowers/
+
+# Temporary reports/screenshots
+reports/*.png
+reports/**/*.png
+reports/webapp_tests/
+
 

@@ -26,30 +26,39 @@ def test_monotonicity_with_amount():
 
 def test_threshold_bounds_and_clamping():
     """
-    Asserts operational threshold bounds [min_step, max_step] and [min_dec, max_dec] across extreme spend regimes.
+    Asserts operational threshold bounds across extreme spend regimes under both tiered and uniform modes.
     """
     router = DynamicCostRouter()
-    extreme_amounts = [0.01, 1.0, 50.0, 500.0, 5000.0, 50000.0, 1000000.0]
+    extreme_amounts = [0.01, 1.0, 50.0, 150.0, 500.0, 5000.0, 50000.0, 1000000.0]
     
+    # 1. Tiered Policy Bounds (Default Level 3+4 Hybrid)
     for amt in extreme_amounts:
         tau_step, tau_dec = router.compute_thresholds(amt)
-        assert router.cfg.min_step_up_threshold <= tau_step <= router.cfg.max_step_up_threshold, f"tau_step out of bounds for amount {amt}: {tau_step}"
-        assert router.cfg.min_decline_threshold <= tau_dec <= router.cfg.max_decline_threshold, f"tau_dec out of bounds for amount {amt}: {tau_dec}"
+        assert 0.010 <= tau_step <= 0.340, f"tau_step out of bounds for amount {amt}: {tau_step}"
+        assert 0.590 <= tau_dec <= 0.950, f"tau_dec out of bounds for amount {amt}: {tau_dec}"
         assert tau_step < tau_dec, f"tau_step {tau_step} >= tau_decline {tau_dec} for amount {amt}"
+
+    # 2. Legacy Uniform Policy Bounds
+    router_uniform = DynamicCostRouter(config=CostMatrixConfig(enable_tiered_policy=False))
+    for amt in extreme_amounts:
+        tau_step, tau_dec = router_uniform.compute_thresholds(amt)
+        assert router_uniform.cfg.min_step_up_threshold <= tau_step <= router_uniform.cfg.max_step_up_threshold
+        assert router_uniform.cfg.min_decline_threshold <= tau_dec <= router_uniform.cfg.max_decline_threshold
+        assert tau_step < tau_dec
 
 def test_micro_vs_high_value_routing_behavior():
     """
     Asserts value-aware dynamic behavior:
-    The exact same risk score (e.g. 10% fraud prob) is APPROVED for small coffee purchases ($10)
+    The exact same risk score (e.g. 8% fraud prob) is APPROVED for small coffee purchases ($10)
     but challenged with 3DS for high-value purchases ($3,000).
     """
     router = DynamicCostRouter()
     
-    res_micro = router.route_transaction(fraud_prob=0.10, amount=10.0)
-    assert res_micro.action == "APPROVE", f"Expected APPROVE for $10 with 10% risk, got {res_micro.action}"
+    res_micro = router.route_transaction(fraud_prob=0.08, amount=10.0)
+    assert res_micro.action == "APPROVE", f"Expected APPROVE for $10 with 8% risk, got {res_micro.action}"
     
-    res_high = router.route_transaction(fraud_prob=0.10, amount=3000.0)
-    assert res_high.action == "STEP_UP_3DS", f"Expected STEP_UP_3DS for $3000 with 10% risk, got {res_high.action}"
+    res_high = router.route_transaction(fraud_prob=0.08, amount=3000.0)
+    assert res_high.action == "STEP_UP_3DS", f"Expected STEP_UP_3DS for $3000 with 8% risk, got {res_high.action}"
     
     res_extreme_fraud = router.route_transaction(fraud_prob=0.85, amount=150.0)
     assert res_extreme_fraud.action == "DECLINE", f"Expected DECLINE for 85% risk, got {res_extreme_fraud.action}"
@@ -81,3 +90,26 @@ def test_dynamic_router_financial_superiority():
     static_missed_fraud_loss = np.sum(amounts[labels == 1] + router.cfg.chargeback_fee)
     
     assert dyn_res["total_financial_loss_dollars"] < static_missed_fraud_loss, "Dynamic router did not outperform static baseline!"
+
+def test_conformal_risk_control_routing_mode():
+    """
+    Verifies Option 3 Conformal Risk Control (CRC) PAC distribution-free routing behavior.
+    """
+    router = DynamicCostRouter()
+    tau_star = 0.0817
+
+    # Risk below tau* -> APPROVE
+    res_approve = router.route_transaction(fraud_prob=0.05, amount=1200.0, mode="crc", crc_tau_star=tau_star)
+    assert res_approve.action == "APPROVE"
+    assert res_approve.tau_step_up == tau_star
+
+    # Risk between tau* and decline threshold -> STEP_UP_3DS
+    res_step_up = router.route_transaction(fraud_prob=0.25, amount=15.0, mode="crc", crc_tau_star=tau_star)
+    assert res_step_up.action == "STEP_UP_3DS"
+    assert res_step_up.tau_step_up == tau_star
+
+    # Extreme risk above 0.65 -> DECLINE
+    res_decline = router.route_transaction(fraud_prob=0.75, amount=100.0, mode="crc", crc_tau_star=tau_star)
+    assert res_decline.action == "DECLINE"
+    assert res_decline.tau_decline == 0.65
+

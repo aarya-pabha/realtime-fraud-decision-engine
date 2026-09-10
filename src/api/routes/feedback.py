@@ -41,6 +41,7 @@ def submit_chargeback_feedback(payload: FeedbackPayload):
     recorded_at = datetime.now(timezone.utc).isoformat()
     feedback_time = payload.feedback_timestamp or recorded_at
     
+    is_fraud_val = payload.get_is_fraud()
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
@@ -50,7 +51,7 @@ def submit_chargeback_feedback(payload: FeedbackPayload):
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 payload.transaction_id,
-                payload.is_fraud,
+                is_fraud_val,
                 payload.analyst_id,
                 payload.dispute_amount,
                 payload.chargeback_reason_code,
@@ -64,7 +65,7 @@ def submit_chargeback_feedback(payload: FeedbackPayload):
             detail=f"Failed to persist feedback record: {str(e)}"
         )
         
-    label_str = "CONFIRMED_FRAUD" if payload.is_fraud == 1 else "CONFIRMED_LEGITIMATE"
+    label_str = "CONFIRMED_FRAUD" if is_fraud_val == 1 else "CONFIRMED_LEGITIMATE"
     return FeedbackResponse(
         status="SUCCESS",
         transaction_id=payload.transaction_id,
@@ -98,3 +99,16 @@ def get_feedback_statistics() -> Dict[str, Any]:
             "confirmed_legitimate_count": 0,
             "fraud_prevalence_ratio": 0.0
         }
+
+@router.post("/feedback/reset", status_code=status.HTTP_200_OK)
+def reset_feedback_db():
+    """Resets all analyst feedback records in the SQLite table."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM analyst_feedback")
+            conn.commit()
+        return {"status": "SUCCESS", "message": "Feedback store reset"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

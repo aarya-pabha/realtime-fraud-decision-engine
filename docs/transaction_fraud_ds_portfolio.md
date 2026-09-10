@@ -1,12 +1,12 @@
 # Flagship Real-Time Transaction Fraud Engine: Deep Research, Architecture & Implementation Blueprint (July 2026)
 
-> **Executive Summary**: An exhaustive, research-backed blueprint for building a **production-grade, real-time transaction fraud detection platform**. This project is specifically designed to position an entry-level or junior Data Science candidate in the top 1% of applicants by solving the exact architectural, metric, and latency challenges faced by fraud engineering teams at companies like Stripe, Adyen, Block (Square), PayPal, Riskified, and Sift.
+> **Executive Summary**: An exhaustive, research-backed blueprint for building a **production-grade, real-time transaction fraud decisioning platform**. This system addresses the exact architectural, financial optimization, and latency challenges faced by payment risk engineering teams at companies like Stripe, Adyen, Block, PayPal, Riskified, and Sift.
 
 ---
 
 ## 1. Comprehensive Dataset Research & Comparison Matrix
 
-Selecting the right dataset is critical. Most candidate projects fail because they use anonymized PCA datasets where entity keys (`user_id`, `card_id`, `ip_address`) are missing, rendering real-time velocity feature engineering impossible.
+Selecting the right dataset is critical. Most public fraud projects fail because they use anonymized PCA datasets where entity keys (`user_id`, `card_id`, `ip_address`) are missing, rendering real-time velocity feature engineering impossible.
 
 ```
  ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -30,14 +30,14 @@ Selecting the right dataset is critical. Most candidate projects fail because th
 
 ### Deep Dive Comparison: Why Choose Sparkov / IEEE-CIS?
 
-| Dataset | Pros | Cons | Verdict for Project 1 |
+| Dataset | Pros | Cons | Production Engineering Verdict |
 | :--- | :--- | :--- | :--- |
-| **Sparkov Credit Card Generator** | Contains raw `cc_num`, `merchant`, `category`, `amt`, `lat`, `long`, `unix_time`, `zip`, `city`. Simulates realistic card-testing bursts and geo-velocity (speed between transactions). | Synthetic (generated via Markov chains). | **BEST CHOICE for Feature Store & Velocity Engine**. Allows building 5m/1h/24h Redis counters and spatial distance metrics. |
-| **IEEE-CIS Fraud Detection** | Real-world Vesta Corp transaction data. Rich identity tables, device info, email domain proxies, and real fraud patterns. | Highly complex; many anonymized V-features (`V1`-`V339`) requiring extensive EDA. | **GREAT ALTERNATIVE / SECONDARY BENCHMARK**. Excellent for practicing high-dimensional tabular ML. |
+| **Sparkov Credit Card Generator** | Contains raw `cc_num`, `merchant`, `category`, `amt`, `lat`, `long`, `unix_time`, `zip`, `city`. Simulates realistic card-testing bursts and geo-velocity (speed between transactions). | Synthetic (generated via Markov chains). | **BEST CHOICE for Velocity Simulation**. Allows building 5m/1h/24h Redis counters and spatial distance metrics. |
+| **IEEE-CIS Fraud Detection** | Real-world Vesta Corp transaction data. Rich identity tables, device info, email domain proxies, and real fraud patterns. | Highly complex; many anonymized V-features (`V1`-`V339`) requiring extensive EDA. | **SELECTED BENCHMARK DATASET**. Excellent for modeling real-world high-dimensional fraud dynamics. |
 | **PaySim (Mobile Money)** | Great for account balance transfers and peer-to-peer (P2P) fraud (e.g. Venmo / Zelle / M-Pesa). | Lacks e-commerce attributes like IP address, device fingerprint, or merchant categories. | Good for P2P transfer projects, but less representative of card-not-present (CNP) e-commerce fraud. |
-| **ULB Credit Card Dataset** | Very clean; widely used in tutorials; benchmark for imbalance algorithms. | **Features are PCA transformed (`V1`-`V28`)**. Timestamp is just seconds from 1st transaction; NO user IDs or card IDs. | **AVOID FOR FEATURE STORE PROJECTS**. Impossible to create velocity features (e.g. "tx count per card in 1 hour"). |
+| **ULB Credit Card Dataset** | Very clean; widely used in tutorials; benchmark for imbalance algorithms. | **Features are PCA transformed (`V1`-`V28`)**. Timestamp is just seconds from 1st transaction; NO user IDs or card IDs. | **AVOID FOR PRODUCTION FEATURE STORES**. Impossible to create velocity features (e.g. "tx count per card in 1 hour"). |
 
-> **Recommendation**: Primary dataset = **IEEE-CIS Fraud Detection** (as per user selection). It provides highly realistic e-commerce fraud patterns and rich identity features.
+> **Selection**: Primary dataset = **IEEE-CIS Fraud Detection** (Vesta Corporation real-world benchmark). It provides authentic e-commerce fraud patterns, device fingerprints, and rich identity features.
 
 ---
 
@@ -76,25 +76,25 @@ Most GitHub repositories suffer from major limitations that hiring managers easi
 4. **No Feature Store / Streaming**: Ignored real-time latency, sliding windows, and point-in-time correctness.
 5. **Black Box Scoring**: Returned a raw probability score without explaining *why* a transaction was flagged.
 
-### The 4 Key Novelties Introduced in Our Project
+### Core Architectural Pillars and System Innovations
 
 ```
  ┌─────────────────────────────────────────────────────────────────────────────┐
- │                         OUR 4 KEY PROJECT NOVELTIES                         │
+ │                         CORE ARCHITECTURAL PILLARS                          │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ NOVELTY 1: DUAL-TIER FEATURE STORE (Redis Online + DuckDB Offline)          │
+ │ PILLAR 1: DUAL-TIER FEATURE STORE (Redis Online + DuckDB Offline)           │
  │ • Zero-leakage temporal point-in-time joins for training                    │
  │ • Sub-5ms Redis key-value retrieval for online velocity (5m, 1h, 24h)       │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ NOVELTY 2: DYNAMIC TRANSACTION-VALUE AWARE COST ROUTER                      │
+ │ PILLAR 2: DYNAMIC TRANSACTION-VALUE AWARE COST ROUTER                       │
  │ • Adapts thresholding based on transaction dollar value ($10 vs $5,000)     │
  │ • Minimizes Total Cost = FN Loss + FP Customer Friction Loss                │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ NOVELTY 3: REAL-TIME SHAP REASON CODES + ANALYST FEEDBACK LOOP              │
- │ • Generates top-3 human-readable attribution codes per transaction           │
+ │ PILLAR 3: REAL-TIME SHAP REASON CODES + ANALYST FEEDBACK LOOP               │
+ │ • Generates top-3 human-readable attribution codes per transaction          │
  │ • Endpoint for 30-day delayed chargeback labels triggering Evidently AI drift│
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ NOVELTY 4: EMPIRICAL SLA LOAD BENCHMARK (Locust / K6)                       │
+ │ PILLAR 4: EMPIRICAL SLA LOAD BENCHMARK (Locust / K6)                        │
  │ • Automated load testing suite proving sub-25ms p95 latency at 1,000 req/sec│
  └─────────────────────────────────────────────────────────────────────────────┘
 ```

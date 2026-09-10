@@ -14,7 +14,7 @@ class TransactionPayload(BaseModel):
     )
     
     TransactionID: Optional[int] = Field(default=None, description="Unique transaction ID")
-    TransactionDT: int = Field(..., ge=0, description="Time delta in seconds from reference epoch")
+    TransactionDT: Optional[int] = Field(default=86400, ge=0, description="Time delta in seconds from reference epoch")
     TransactionAmt: float = Field(..., gt=0.0, description="Transaction payment amount in USD")
     ProductCD: str = Field(default="W", description="Product code category")
     
@@ -104,14 +104,22 @@ class ScoringResponse(BaseModel):
 
 class FeedbackPayload(BaseModel):
     """Schema for ground-truth chargeback / dispute labels from fraud analysts."""
-    model_config = ConfigDict(str_strip_whitespace=True, extra='ignore')
+    model_config = ConfigDict(str_strip_whitespace=True, extra='ignore', populate_by_name=True)
     
     transaction_id: int = Field(..., description="Target transaction ID")
-    is_fraud: int = Field(..., ge=0, le=1, description="1 if confirmed fraud/chargeback, 0 if legitimate")
+    is_fraud: Optional[int] = Field(default=None, ge=0, le=1, description="1 if confirmed fraud/chargeback, 0 if legitimate")
+    is_fraud_chargeback: Optional[int] = Field(default=None, ge=0, le=1, description="Alias for is_fraud")
     analyst_id: str = Field(default="analyst_system", description="Identifier of reporting analyst or webhook")
     dispute_amount: Optional[float] = Field(default=None, description="Disputed dollar amount")
     chargeback_reason_code: Optional[str] = Field(default=None, description="Visa/Mastercard reason code (e.g. 10.4, 4837)")
     feedback_timestamp: Optional[str] = Field(default=None, description="Timestamp of analyst resolution")
+
+    def get_is_fraud(self) -> int:
+        if self.is_fraud is not None:
+            return self.is_fraud
+        if self.is_fraud_chargeback is not None:
+            return self.is_fraud_chargeback
+        return 1
 
 class FeedbackResponse(BaseModel):
     """Response schema for POST /v1/feedback."""
