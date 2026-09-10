@@ -45,17 +45,16 @@ RUN useradd -m -u 1000 user && \
 COPY --chown=user:user src/ /app/src/
 COPY --chown=user:user feature_repo/ /app/feature_repo/
 COPY --chown=user:user models/ /app/models/
-COPY --chown=user:user data/ /app/data/
-COPY --chown=user:user feature_store.duckdb /app/feature_store.duckdb
+COPY --chown=user:user data/holdout_stream_sample.parquet /app/data/holdout_stream_sample.parquet
 
 # Copy built frontend assets from Stage 1 into /app/static
 COPY --from=frontend-builder --chown=user:user /frontend/dist /app/static
 
 USER user
 
-EXPOSE 7860
+EXPOSE 7860 10000
 
 HEALTHCHECK --interval=15s --timeout=3s --retries=3 --start-period=15s \
-    CMD python -c "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:7860/v1/health').status == 200 else 1)"
+    CMD python -c "import urllib.request, sys, os; port = os.environ.get('PORT', '7860'); sys.exit(0 if urllib.request.urlopen(f'http://localhost:{port}/v1/health').status == 200 else 1)"
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1", "--loop", "uvloop", "--http", "httptools"]
+CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-7860} --workers 1 --loop uvloop --http httptools"]
