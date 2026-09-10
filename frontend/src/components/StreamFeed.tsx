@@ -8,6 +8,29 @@ interface StreamFeedProps {
   onSelectTransaction: (tx: TransactionItem) => void;
 }
 
+// Convert raw snake_case reason codes into human-readable banking terms
+const formatReasonCode = (code: string): string => {
+  const overrides: Record<string, string> = {
+    HIGH_VELOCITY_ASSOCIATED_PHONE_COUNT: 'High-Velocity Phone Burst',
+    RISK_INDICATOR_R_EMAILDOMAIN: 'High-Risk Recipient Email',
+    RISK_INDICATOR_P_EMAILDOMAIN: 'High-Risk Purchaser Email',
+    IRREGULAR_TRANSACTION_CYCLE_DELTA: 'Irregular Timing Cycle',
+    UNUSUAL_TRANSACTION_AMOUNT: 'Unusual High-Value Purchase',
+    UNUSUAL_PAYMENT_COUNT_BURST: 'Rapid Payment Velocity Spike',
+    HIGH_RISK_CARD_TYPE_CATEGORY: 'High-Risk Card Category',
+    HIGH_CROSS_MERCHANT_CARD_COUNT: 'High Cross-Merchant Activity',
+    NORMAL_ACCOUNT_BEHAVIOR: 'Clean Baseline (TreeSHAP Bypassed)',
+    LOW_RISK_TRANSACTION_AMOUNT: 'Standard Low-Risk Amount',
+    VERIFIED_DEVICE_BASELINE: 'Verified Device Baseline',
+  };
+  if (overrides[code]) return overrides[code];
+
+  return code
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 export const StreamFeed: React.FC<StreamFeedProps> = ({
   transactions,
   selectedTxId,
@@ -115,14 +138,23 @@ export const StreamFeed: React.FC<StreamFeedProps> = ({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold text-[#202318] truncate">
-                        ${tx.transaction_amount.toFixed(2)}
+                        ${(tx.transaction_amount ?? 0).toFixed(2)}
                       </p>
                       <span className="text-xs font-medium text-[#707367] mono-num">
                         • {tx.card_token}
                       </span>
                     </div>
                     <p className="text-xs text-[#707367] truncate mt-0.5">
-                      P(Fraud): <span className="font-bold text-[#202318] mono-num">{(tx.fraud_probability * 100).toFixed(1)}%</span> • {tx.primary_reason}
+                      P(Fraud): <span className="font-bold text-[#202318] mono-num">{((tx.fraud_probability ?? 0) * 100).toFixed(1)}%</span> •{' '}
+                      <span className={
+                        tx.action === 'APPROVE'
+                          ? 'text-[#006323] font-medium'
+                          : tx.action === 'DECLINE'
+                          ? 'text-rose-700 font-medium'
+                          : 'text-amber-800 font-medium'
+                      }>
+                        {tx.action === 'APPROVE' ? 'Clean Baseline (TreeSHAP Bypassed)' : formatReasonCode(tx.primary_reason)}
+                      </span>
                     </p>
                   </div>
                 </div>

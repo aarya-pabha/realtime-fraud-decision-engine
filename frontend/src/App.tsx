@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { StatCards } from './components/StatCards';
-import { AnalyticsChart } from './components/AnalyticsChart';
+import { FinancialSavingsCard } from './components/FinancialSavingsCard';
 import { StreamFeed } from './components/StreamFeed';
 import { PolicyActionBox } from './components/PolicyActionBox';
-import { ProgressDonut } from './components/ProgressDonut';
 import { ScenarioModal } from './components/ScenarioModal';
 import { SimulatorView } from './components/SimulatorView';
 import { DriftView } from './components/DriftView';
@@ -22,6 +21,12 @@ const DEFAULT_KPIS: StreamKpis = {
   decline_rate_pct: 0.0,
   total_amount_dollars: 0.0,
   prevented_fraud_dollars: 0.0,
+  liability_shifted_dollars: 0.0,
+  friction_saved_dollars: 0.0,
+  net_savings_dollars: 0.0,
+  static_loss_dollars: 0.0,
+  tuned_static_loss_dollars: 0.0,
+  dynamic_loss_dollars: 0.0,
   avg_latency_ms: 1.42,
   p95_latency_ms: 3.80,
   chargeback_ratio_pct: 0.42,
@@ -110,13 +115,18 @@ export const App: React.FC = () => {
   const handleSimulatePreset = (preset: string) => {
     if (preset === 'attack') {
       handleSimulate({
-        TransactionAmt: 45.0,
+        TransactionAmt: 150.0,
         ProductCD: 'C',
         card1: 8821,
         card4: 'mastercard',
         card6: 'credit',
         P_emaildomain: 'mailinator.com',
-        C1: 8,
+        R_emaildomain: 'protonmail.com',
+        C1: 15.0,
+        C2: 15.0,
+        tx_count_5m: 14,
+        tx_count_1h: 42,
+        amt_sum_24h: 5800.0,
         TransactionDT: 86400,
       });
     } else if (preset === 'highval') {
@@ -127,7 +137,24 @@ export const App: React.FC = () => {
         card4: 'visa',
         card6: 'credit',
         P_emaildomain: 'anonymous.com',
-        C1: 1,
+        C1: 1.0,
+        tx_count_5m: 1,
+        tx_count_1h: 2,
+        amt_sum_24h: 2400.0,
+        TransactionDT: 86400,
+      });
+    } else if (preset === 'normal') {
+      handleSimulate({
+        TransactionAmt: 25.0,
+        ProductCD: 'W',
+        card1: 10230,
+        card4: 'visa',
+        card6: 'debit',
+        P_emaildomain: 'gmail.com',
+        C1: 1.0,
+        tx_count_5m: 0,
+        tx_count_1h: 1,
+        amt_sum_24h: 25.0,
         TransactionDT: 86400,
       });
     }
@@ -141,12 +168,27 @@ export const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transaction_id: txId,
+          is_fraud: isChargeback ? 1 : 0,
           is_fraud_chargeback: isChargeback ? 1 : 0,
-          analyst_notes: isChargeback ? 'Verified payment dispute chargeback' : 'Verified legitimate purchase',
+          analyst_id: 'analyst_ops',
+          dispute_amount: selectedTx?.transaction_amount || 0.0,
+          chargeback_reason_code: isChargeback ? '10.4_FRAUD_CARD_ABSENT_ENVIRONMENT' : 'LEGITIMATE_PURCHASE',
         }),
       });
     } catch (err) {
       console.error('Feedback error:', err);
+    }
+  };
+
+  const handleInjectDriftWave = async () => {
+    try {
+      const res = await fetch('/v1/stream/drift/inject', { method: 'POST' });
+      if (res.ok) {
+        fetchStreamData();
+        window.dispatchEvent(new CustomEvent('fraud-engine:drift-updated'));
+      }
+    } catch (err) {
+      console.error('Failed to inject drift wave:', err);
     }
   };
 
@@ -164,8 +206,10 @@ export const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 ml-64 p-6 lg:p-8 max-w-[1600px]">
         <Header
+          activeTab={activeTab}
           onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
           onReplayStream={handleReplayStream}
+          onInjectDriftWave={handleInjectDriftWave}
         />
 
         {/* Tab 1: Full Tasko Dashboard View */}
@@ -186,17 +230,16 @@ export const App: React.FC = () => {
               </div>
 
               {/* Right Column (1/3 width) */}
-              <div className="space-y-6">
+              <div>
                 <PolicyActionBox
                   selectedTx={selectedTx}
                   onSubmitFeedback={handleSubmitFeedback}
                 />
-                <ProgressDonut kpis={kpis} />
               </div>
             </div>
 
-            {/* Historical Analytics Chart (Full Width at Bottom) */}
-            <AnalyticsChart kpis={kpis} />
+            {/* Financial ROI & Money Saved Card (Full Width at Bottom) */}
+            <FinancialSavingsCard kpis={kpis} />
           </div>
         )}
 

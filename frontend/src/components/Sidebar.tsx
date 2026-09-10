@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  SquareCheckBig, 
+  SlidersHorizontal, 
   ShieldAlert, 
   ShieldCheck,
   Zap
@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <SquareCheckBig className="w-4 h-4" />
+                <SlidersHorizontal className="w-4 h-4" />
                 <span>3DS Simulator</span>
               </div>
               <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -104,6 +104,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </nav>
         </div>
+
+
       </div>
 
       {/* Telemetry Cockpit Section */}
@@ -120,8 +122,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Engine SLA
               </span>
             </div>
-            <span className="text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/60 px-2 py-0.5 rounded-full">
-              p95 &lt; 25ms
+            <span className={`text-[9px] font-bold border px-2 py-0.5 rounded-full ${
+              p95LatencyMs <= 25.0
+                ? 'bg-emerald-950 text-emerald-300 border-emerald-800/60'
+                : 'bg-rose-950 text-rose-300 border-rose-800/60'
+            }`}>
+              {p95LatencyMs <= 25.0 ? 'p95 < 25ms' : 'p95 > 25ms Spike'}
             </span>
           </div>
           <div className="text-2xl font-black tracking-tight mono-num text-white my-1">

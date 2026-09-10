@@ -32,6 +32,13 @@ class ScoringRingBuffer:
         self.declined_count = 0
         self.total_amount = 0.0
         self.prevented_fraud_amount = 0.0
+        self.liability_shifted_amount = 0.0
+        self.friction_saved_amount = 0.0
+        self.operational_3ds_cost = 0.0
+        self.net_savings_dollars = 0.0
+        self.static_loss_dollars = 0.0
+        self.tuned_static_loss_dollars = 0.0
+        self.dynamic_loss_dollars = 0.0
         self.latencies = deque(maxlen=500)
 
     def append(self, item: Dict[str, Any]):
@@ -40,16 +47,36 @@ class ScoringRingBuffer:
             self.total_processed += 1
             action = item.get("action", "APPROVE")
             amt = float(item.get("transaction_amount", 0.0))
+            prob = float(item.get("fraud_probability", 0.0))
             self.total_amount += amt
             
             if action == "APPROVE":
                 self.approved_count += 1
+                self.dynamic_loss_dollars += prob * (amt + 25.0)
             elif action == "STEP_UP_3DS":
                 self.step_up_count += 1
+                self.liability_shifted_amount += amt
+                self.friction_saved_amount += 5.00
+                self.operational_3ds_cost += 0.05
+                self.dynamic_loss_dollars += 0.05 + 0.05 * (prob * (amt + 25.0))
             elif action == "DECLINE":
                 self.declined_count += 1
                 self.prevented_fraud_amount += amt
+                self.dynamic_loss_dollars += (1.0 - prob) * (5.00 + 0.02 * amt)
                 
+            # Static 0.50 cutoff benchmark comparison on the exact same streaming transaction
+            if prob >= 0.50:
+                self.static_loss_dollars += (1.0 - prob) * (5.00 + 0.02 * amt)
+            else:
+                self.static_loss_dollars += prob * (amt + 25.0)
+                
+            # Tuned Static 0.17 cutoff benchmark comparison (In-Between: Cost-Tuned, No 3DS)
+            if prob >= 0.17:
+                self.tuned_static_loss_dollars += (1.0 - prob) * (5.00 + 0.02 * amt)
+            else:
+                self.tuned_static_loss_dollars += prob * (amt + 25.0)
+                
+            self.net_savings_dollars = max(0.0, self.prevented_fraud_amount + self.friction_saved_amount - self.operational_3ds_cost)
             self.latencies.append(float(item.get("total_latency_ms", 0.0)))
 
     def reset(self):
@@ -61,6 +88,13 @@ class ScoringRingBuffer:
             self.declined_count = 0
             self.total_amount = 0.0
             self.prevented_fraud_amount = 0.0
+            self.liability_shifted_amount = 0.0
+            self.friction_saved_amount = 0.0
+            self.operational_3ds_cost = 0.0
+            self.net_savings_dollars = 0.0
+            self.static_loss_dollars = 0.0
+            self.tuned_static_loss_dollars = 0.0
+            self.dynamic_loss_dollars = 0.0
             self.latencies.clear()
 
     def get_recent(self, limit: int = 25) -> List[Dict[str, Any]]:
@@ -82,8 +116,14 @@ class ScoringRingBuffer:
                 "decline_rate_pct": round((self.declined_count / total) * 100.0, 1),
                 "total_amount_dollars": round(self.total_amount, 2),
                 "prevented_fraud_dollars": round(self.prevented_fraud_amount, 2),
+                "liability_shifted_dollars": round(self.liability_shifted_amount, 2),
+                "friction_saved_dollars": round(self.friction_saved_amount, 2),
+                "net_savings_dollars": round(self.net_savings_dollars, 2),
+                "static_loss_dollars": round(self.static_loss_dollars, 2),
+                "tuned_static_loss_dollars": round(self.tuned_static_loss_dollars, 2),
+                "dynamic_loss_dollars": round(self.dynamic_loss_dollars, 2),
                 "avg_latency_ms": round(sum(lat_list) / len(lat_list), 2),
-                "p95_latency_ms": round(sorted_lats[int(len(sorted_lats) * 0.95)], 2)
+                "p95_latency_ms": round(sorted_lats[min(len(sorted_lats) - 1, int(len(sorted_lats) * 0.95))], 2)
             }
 
 # Shared singleton ring buffer for Dashboard ingestion

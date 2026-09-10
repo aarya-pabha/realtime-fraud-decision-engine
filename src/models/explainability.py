@@ -7,7 +7,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import time
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Union
 
 REASON_CODE_MAP = {
     # Velocity & Burst Attacks
@@ -85,7 +85,7 @@ class FraudExplainer:
         self.model = lgb.Booster(model_file=model_path)
         self.feature_names = self.model.feature_name()
 
-    def predict_proba(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[float, float]:
+    def predict_proba(self, feature_df: Union[pd.DataFrame, np.ndarray], num_iteration: Optional[int] = None) -> Tuple[float, float]:
         """
         Ultra-fast pure LightGBM probability inference (<3.5ms) without TreeSHAP attribution.
         Returns: (calibrated_fraud_prob, latency_ms)
@@ -102,7 +102,7 @@ class FraudExplainer:
         latency_ms = (time.perf_counter() - t0) * 1000.0
         return fraud_prob, latency_ms
 
-    def explain(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[List[str], float]:
+    def explain(self, feature_df: Union[pd.DataFrame, np.ndarray], num_iteration: Optional[int] = None) -> Tuple[List[str], float]:
         """
         Localized TreeSHAP attribution generating top-3 operational reason codes (~14.5ms).
         Invoked conditionally on adverse actions (STEP_UP_3DS / DECLINE).
@@ -123,7 +123,7 @@ class FraudExplainer:
         latency_ms = (time.perf_counter() - t0) * 1000.0
         return reason_codes, latency_ms
 
-    def score_and_explain(self, feature_df: pd.DataFrame, num_iteration: Optional[int] = None) -> Tuple[float, List[str], float]:
+    def score_and_explain(self, feature_df: Union[pd.DataFrame, np.ndarray], num_iteration: Optional[int] = None) -> Tuple[float, List[str], float]:
         """
         Unified single-pass LightGBM C++ inference and localized TreeSHAP attribution.
         Returns: (calibrated_fraud_prob, top_3_reason_codes, latency_ms)
@@ -152,7 +152,7 @@ class FraudExplainer:
         
         return fraud_prob, reason_codes, latency_ms
         
-    def explain_transaction(self, feature_df: pd.DataFrame) -> Dict[str, Any]:
+    def explain_transaction(self, feature_df: Union[pd.DataFrame, np.ndarray]) -> Dict[str, Any]:
         """
         Computes localized Shapley values for a single transaction vector in sub-1.0ms.
         Uses LightGBM native C++ TreeSHAP implementation (pred_contrib=True).

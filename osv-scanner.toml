@@ -1,0 +1,6 @@
+# OSV-Scanner Configuration
+# Exempts known upstream vulnerabilities that lack upstream patches and are unexploitable in this architecture
+
+[[IgnoredVulns]]
+id = "GHSA-8mgp-746c-j5xp"
+reason = "Transitive dependency of evidently. NLTK model-artifact APIs are not invoked; application exclusively computes tabular Wasserstein-1 distribution metrics."

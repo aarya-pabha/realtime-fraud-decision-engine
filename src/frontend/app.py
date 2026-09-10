@@ -23,9 +23,8 @@ from src.models.explainability import FraudExplainer
 from src.api.feature_service import FeatureService
 from src.api.schemas import TransactionPayload
 
-# Initialize Background Consumer and Services
-consumer_worker = StreamingScoringConsumer()
-consumer_worker.start_background_worker()
+# Initialize Services
+consumer_worker = None
 
 producer_instance = TransactionProducer()
 drift_service = DriftMonitoringService()
@@ -864,6 +863,8 @@ def update_drift_center(n):
 
 
 if __name__ == "__main__":
+    consumer_worker = StreamingScoringConsumer()
+    consumer_worker.start_background_worker()
     start_producer_background(rate=5.0)
     print("[Workbench] Launching Ramp Editorial Workstation on http://127.0.0.1:8050 ...", flush=True)
     app.run(host="127.0.0.1", port=8050, debug=False)

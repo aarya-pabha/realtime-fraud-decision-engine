@@ -47,4 +47,7 @@ frontend/dist/
 
 # Temporary reports/screenshots
 reports/*.png
+reports/**/*.png
+reports/webapp_tests/
+
 

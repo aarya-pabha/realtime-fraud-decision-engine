@@ -6,9 +6,20 @@ from src.api.schemas import HealthResponse
 
 router = APIRouter(tags=["System Health & Metadata"])
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+
 @router.get("/", status_code=status.HTTP_200_OK)
-def root_index() -> Dict[str, Any]:
-    """Root metadata endpoint returning service catalog and documentation links."""
+def root_index(request: Request) -> Any:
+    """Root metadata endpoint returning service catalog or serving SPA index.html for browsers."""
+    accept_header = request.headers.get("accept", "")
+    static_index = Path(__file__).resolve().parent.parent.parent.parent / "static" / "index.html"
+    if not static_index.exists():
+        static_index = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "dist" / "index.html"
+
+    if "text/html" in accept_header and static_index.exists():
+        return FileResponse(static_index)
+
     return {
         "service": "Real-Time Transaction Fraud Detection Engine",
         "api_version": "v1.0.0",

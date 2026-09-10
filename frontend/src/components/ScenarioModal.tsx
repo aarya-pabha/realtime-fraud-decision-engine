@@ -25,14 +25,19 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
     e.preventDefault();
     setLoading(true);
     try {
+      const isCrossBorderAttack = productCode === 'C' || velocity > 5 || emailDomain.includes('mailinator');
       await onSimulate({
         TransactionAmt: amount,
         ProductCD: productCode,
-        card1: 4242,
-        card4: 'visa',
-        card6: 'credit',
+        card1: isCrossBorderAttack ? 8821 : (amount > 1000 ? 4242 : 10230),
+        card4: isCrossBorderAttack ? 'mastercard' : 'visa',
+        card6: isCrossBorderAttack || amount > 1000 ? 'credit' : 'debit',
         P_emaildomain: emailDomain,
+        R_emaildomain: emailDomain.includes('mailinator') ? 'protonmail.com' : undefined,
         C1: velocity,
+        tx_count_5m: velocity > 1 ? velocity : 0,
+        tx_count_1h: velocity > 1 ? velocity * 3 : 1,
+        amt_sum_24h: velocity > 1 ? amount * velocity : amount,
         TransactionDT: 86400,
       });
       onClose();
@@ -97,11 +102,11 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
 
             <button
               type="button"
-              onClick={() => applyPreset(45, 8, 'C', 'mailinator.com')}
+              onClick={() => applyPreset(150, 14, 'C', 'mailinator.com')}
               className="p-2 rounded-xl border border-[#e9ebe3] bg-[#f8f9f5] hover:bg-rose-50 hover:border-rose-200 text-left transition-all cursor-pointer"
             >
               <span className="text-xs font-bold text-rose-700 block">Card-Burst</span>
-              <span className="text-[10px] text-[#707367]">$45 • 8 tx</span>
+              <span className="text-[10px] text-[#707367]">$150 • 14 tx</span>
             </button>
           </div>
         </div>
@@ -111,7 +116,7 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
           {/* Amount Slider */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-bold text-[#202318]">
+              <label htmlFor="simulation-amount-slider" className="text-xs font-bold text-[#202318]">
                 Transaction Amount ($ USD)
               </label>
               <span className="text-sm font-bold text-[#006323] mono-num">
@@ -119,6 +124,9 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
               </span>
             </div>
             <input
+              id="simulation-amount-slider"
+              name="simulation-amount-slider"
+              aria-label="Transaction Amount ($ USD)"
               type="range"
               min={10}
               max={4000}
@@ -138,7 +146,7 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
           {/* Velocity Slider */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-bold text-[#202318]">
+              <label htmlFor="simulation-velocity-slider" className="text-xs font-bold text-[#202318]">
                 Card Velocity (5-Min Authorizations)
               </label>
               <span className="text-sm font-bold text-amber-600 mono-num">
@@ -146,9 +154,12 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
               </span>
             </div>
             <input
+              id="simulation-velocity-slider"
+              name="simulation-velocity-slider"
+              aria-label="Card Velocity (5-Min Authorizations)"
               type="range"
               min={0}
-              max={10}
+              max={20}
               step={1}
               value={velocity}
               onChange={(e) => setVelocity(Number(e.target.value))}
@@ -156,18 +167,20 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
             />
             <div className="flex justify-between text-[10px] text-[#707367] mono-num mt-1">
               <span>0 (Single)</span>
-              <span>5 (High)</span>
-              <span>10 (Burst)</span>
+              <span>10 (High)</span>
+              <span>20 (Burst)</span>
             </div>
           </div>
 
           {/* Product Category */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-[#202318] block mb-1">
+              <label htmlFor="simulation-product-category" className="text-xs font-bold text-[#202318] block mb-1">
                 Product Category
               </label>
               <select
+                id="simulation-product-category"
+                name="simulation-product-category"
                 value={productCode}
                 onChange={(e) => setProductCode(e.target.value)}
                 className="w-full h-9 px-3 rounded-xl border border-[#e9ebe3] bg-white text-xs font-semibold text-[#202318] focus:outline-none focus:border-[#006323]"
@@ -180,10 +193,12 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-[#202318] block mb-1">
+              <label htmlFor="simulation-email-domain" className="text-xs font-bold text-[#202318] block mb-1">
                 Email Domain Profile
               </label>
               <select
+                id="simulation-email-domain"
+                name="simulation-email-domain"
                 value={emailDomain}
                 onChange={(e) => setEmailDomain(e.target.value)}
                 className="w-full h-9 px-3 rounded-xl border border-[#e9ebe3] bg-white text-xs font-semibold text-[#202318] focus:outline-none focus:border-[#006323]"

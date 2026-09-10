@@ -205,14 +205,78 @@ def replay_stream() -> Dict[str, Any]:
                 consumer.score_single_event(rec)
             except Exception as e:
                 print(f"[Replay Seed Error] {e}")
+    # Reset dispute feedback store to synchronize with replayed stream
+    db_path = "data/feedback_store.sqlite"
+    if not os.path.exists(db_path) and os.path.exists(os.path.join("..", db_path)):
+        db_path = os.path.join("..", db_path)
+    if os.path.exists(db_path):
+        try:
+            import sqlite3
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("DELETE FROM analyst_feedback")
+                conn.commit()
+        except Exception as e:
+            print(f"[Replay Feedback Reset Error] {e}")
+
+    # Also reset any active simulated drift
+    drift_service.reset_drift()
+
     return {
         "status": "replayed",
-        "message": "Stream replayed from holdout index 0",
+        "message": "Stream replayed from holdout index 0, feedback queue cleared, and drift baseline restored",
         "total_seeded": min(10, len(_HOLDOUT_CACHE))
     }
 
 @router.get("/drift", status_code=status.HTTP_200_OK)
 def get_drift_metrics() -> Dict[str, Any]:
     """Returns current data and prediction drift report via Evidently AI."""
-    report = drift_service.compute_drift_report()
+    return drift_service.run_drift_analysis()
+
+@router.post("/drift/run", status_code=status.HTTP_200_OK)
+def trigger_drift_run() -> Dict[str, Any]:
+    """Triggers an on-demand retrospective drift analysis run."""
+    return drift_service.run_drift_analysis()
+
+@router.post("/drift/inject", status_code=status.HTTP_200_OK)
+def inject_drift_wave() -> Dict[str, Any]:
+    """
+    Simulates a high-velocity botnet & high-ticket ATO drift shock.
+    Injects 15 anomalous burst transactions into the stream ring buffer and
+    elevates Wasserstein-1 and Jensen-Shannon drift distances past 0.100.
+    """
+    now_str = time.strftime("%H:%M:%S")
+    # Inject 15 anomalous burst transactions into the ring buffer
+    for i in range(15):
+        tx_id = int(time.time() * 1000) % 10000000 + i
+        amt = round(1450.0 + (i * 95.0), 2)
+        prob = round(0.78 + (i % 4) * 0.05, 4)
+        item = {
+            "transaction_id": tx_id,
+            "timestamp": now_str,
+            "transaction_amount": amt,
+            "fraud_probability": prob,
+            "action": "DECLINE" if prob >= 0.85 else "STEP_UP_3DS",
+            "primary_reason": "High-Velocity Phone Burst Count" if i % 2 == 0 else "High-Risk Recipient Email Domain",
+            "reason_codes": [
+                "High-Velocity Phone Burst Count",
+                "High-Risk Recipient Email Domain",
+                "Unusual High-Value Purchase Amount"
+            ],
+            "card_token": f"Visa •••• {9100 + i}",
+            "velocity_5m": 14 + (i % 6),
+            "category": "disposable.email.com",
+            "total_latency_ms": round(18.5 + (i * 0.4), 2),
+            "tau_step_up": 0.035,
+            "tau_decline": 0.650
+        }
+        GLOBAL_RING_BUFFER.append(item)
+
+    report = drift_service.inject_drift_wave(wave_type="burst_attack")
     return report
+
+@router.post("/drift/reset", status_code=status.HTTP_200_OK)
+def reset_drift_metrics() -> Dict[str, Any]:
+    """Restores baseline distribution and clears drift alert state."""
+    report = drift_service.reset_drift()
+    return report
+

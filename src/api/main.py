@@ -66,9 +66,18 @@ app = FastAPI(
 )
 
 # Cross-Origin Resource Sharing (CORS) Middleware
+allowed_origins = [
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,6 +98,41 @@ app.include_router(scoring.router)
 app.include_router(feedback.router)
 app.include_router(stream.router)
 
+# Standalone Static Frontend Serving (for all-in-one containers such as Hugging Face Spaces)
+from pathlib import Path
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+_static_dir = Path(__file__).resolve().parent.parent.parent / "static"
+if not _static_dir.exists():
+    _frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+    if _frontend_dist.exists():
+        _static_dir = _frontend_dist
+
+if _static_dir.exists() and (_static_dir / "index.html").exists():
+    _assets_dir = _static_dir / "assets"
+    if _assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(_assets_dir)), name="spa_assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Never intercept API, docs, or health endpoints
+        if (
+            full_path.startswith("v1")
+            or full_path.startswith("docs")
+            or full_path.startswith("redoc")
+            or full_path == "openapi.json"
+            or full_path == "health"
+        ):
+            raise HTTPException(status_code=404, detail="API route not found")
+
+        target_file = _static_dir / full_path
+        if full_path and target_file.is_file():
+            return FileResponse(target_file)
+        return FileResponse(_static_dir / "index.html")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("src.api.main:app", host="0.0.0.0", port=port, reload=True)
