@@ -1,14 +1,3 @@
----
-title: Real-Time Transaction Fraud Decisioning Engine
-emoji: 🛡️
-colorFrom: emerald
-colorTo: slate
-sdk: docker
-app_port: 7860
-pinned: false
-license: mit
----
-
 <div align="center">
 
 # Real-Time Transaction Fraud Decisioning Engine
@@ -34,27 +23,27 @@ license: mit
 
 ## Executive Summary and Financial Impact
 
-Traditional fraud machine learning models evaluate risk against an arbitrary, static classification cutoff (such as 50% probability), treating a $\$10$ coffee purchase identically to a $\$3,500$ wire transfer. In real-world payment networks, false alarms and missed fraud have radically asymmetric business consequences:
+Traditional fraud machine learning models evaluate risk against an arbitrary, static classification cutoff (such as 50% probability), treating a $10 coffee purchase identically to a $3,500 wire transfer. In real-world payment networks, false alarms and missed fraud have radically asymmetric business consequences:
 
-- **False Alarm / False Positive ($L_{FP}$):** A legitimate customer is flagged as suspicious. The merchant challenges the purchase via SMS OTP or mobile banking verification (costing $\approx \$0.05$ in verification fees) or risks cart abandonment.
-- **Missed Fraud / False Negative ($L_{FN}$):** A stolen credit card charge goes through. The merchant loses the full purchase amount ($V$) and must pay a mandatory, non-refundable card-network chargeback processing fee ($\approx \$25.00$).
+- **False Alarm / False Positive (`L_FP`):** A legitimate customer is flagged as suspicious. The merchant challenges the purchase via SMS OTP or mobile banking verification (costing approximately $0.05 in verification fees) or risks cart abandonment.
+- **Missed Fraud / False Negative (`L_FN`):** A stolen credit card charge goes through. The merchant loses the full purchase amount (`V`) and must pay a mandatory, non-refundable card-network chargeback processing fee (approximately $25.00).
 
 This platform replaces naive fixed cutoffs with an **Adaptive Dynamic Cost Router** backed by **Conformal Risk Control** (mathematical finite-sample guarantees) and **EMV 3-D Secure (3DS2) liability shift protocols**.
 
 ### Financial Performance Scorecard (Month 6 Holdout Test Set: 92,453 Transactions)
 
-Evaluated on an untouched 92,453-transaction holdout test partition representing Month 6 ($3,215$ actual fraud events, $>\$12.5\text{M}$ total transaction volume):
+Evaluated on an untouched 92,453-transaction holdout test partition representing Month 6 (3,215 actual fraud events, >$12.5M total transaction volume):
 
 | Decision Policy | Realized Dollar Loss | Net Capital Preserved | Loss Reduction | Chargeback Ratio | Scheme Compliance Status | Verification Friction |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Naive Baseline (Approve-All / No ML)** | **$567,991.62** | -$229,245.75 | 0.0% (Ref) | 3.48% | **FAILED** (Severe Visa VAMP Breach: >1.50%) | 0.00% |
-| **Standard Static ML ($\tau = 0.50$)** | **$338,745.87** | $0.00 | 0.0% (Base) | 1.79% | **FAILED** (Mastercard ECP Breach: >1.00%) | 1.84% |
-| **Tuned Static Global Cutoff ($\tau = 0.17$)** | **$241,565.54** | +$97,180.32 | 28.7% | 0.92% | **PASS** (Marginal Compliance: <1.00%) | 10.84% (Severe Churn Risk) |
+| **Standard Static ML (τ = 0.50)** | **$338,745.87** | $0.00 | 0.0% (Base) | 1.79% | **FAILED** (Mastercard ECP Breach: >1.00%) | 1.84% |
+| **Tuned Static Global Cutoff (τ = 0.17)** | **$241,565.54** | +$97,180.32 | 28.7% | 0.92% | **PASS** (Marginal Compliance: <1.00%) | 10.84% (Severe Churn Risk) |
 | **Dynamic Cost Router with 3DS2 (Value-Adaptive)** | **$95,688.32** | **+$243,057.54** | **71.8%** | **0.40%** | **ELITE COMPLIANCE** (<0.50% Safe Margin) | 7.50% (Frictionless Step-Up) |
 
 > **Payment Risk Fundamentals:**
 > - **Chargeback Ratio:** The proportion of total transaction dollar volume disputed as fraudulent. Payment networks (Visa and Mastercard) mandate that merchants keep chargeback ratios below **0.90% to 1.00%**.
-> - **Visa VAMP & Mastercard ECP:** Regulatory compliance enforcement programs (*Visa Acquirer Monitoring Program* & *Mastercard Excessive Chargeback Program*). Exceeding a 1.00% to 1.50% chargeback ratio results in heavy monthly fines ($10,000–$100,000+), higher per-transaction processing fees, and potential processor account termination.
+> - **Visa VAMP & Mastercard ECP:** Regulatory compliance enforcement programs (*Visa Acquirer Monitoring Program* & *Mastercard Excessive Chargeback Program*). Exceeding a 1.00% to 1.50% chargeback ratio results in heavy monthly fines ($10,000 to $100,000+), higher per-transaction processing fees, and potential processor account termination.
 > - **3-D Secure 2.0 (3DS2) & Liability Shift:** The modern authentication standard behind SMS verification codes and mobile banking app confirmations (e.g., *Verified by Visa* or *Mastercard Identity Check*). Under global card scheme rules, once a cardholder successfully completes 3DS2 authentication, **all legal fraud dispute liability transfers from the online merchant to the card-issuing bank**.
 > - **Customer Friction:** The percentage of legitimate shoppers asked to complete additional verification steps. Keeping friction low is essential to prevent cart abandonment.
 
@@ -92,9 +81,9 @@ The Dynamic Cost Router automatically adjusts its scrutiny based on transaction 
 1. **Streaming Ingest & Gateway:** When a customer clicks "Pay", checkout data is sent via JSON POST to the FastAPI gateway while background workers replay incoming transaction streams from Redpanda (Kafka).
 2. **Sub-5ms Feature Hydration:** The Feature Service queries Redis to fetch the cardholder's recent velocity history (e.g., transaction counts in the last 5 minutes, 1 hour, or 24 hours), packing a 76-dimensional numerical vector into memory in under 0.1ms.
 3. **Inference & Value-Aware Routing:** The pre-warmed LightGBM machine learning model scores the transaction. The Dynamic Cost Router evaluates the fraud probability against the purchase dollar amount:
-   - **Clean approvals ($P < \tau^*$):** Approved in <3.5ms without disturbing the customer.
-   - **Borderline risk ($\tau^* \le P < 0.85$):** Escalated to an SMS/OTP 3DS2 challenge, shifting fraud liability to the bank.
-   - **High-confidence fraud ($P \ge 0.85$):** Blocked immediately.
+   - **Clean approvals (`P < τ*`):** Approved in < 3.5ms without disturbing the customer.
+   - **Borderline risk (`τ* ≤ P < 0.85`):** Escalated to an SMS/OTP 3DS2 challenge, shifting fraud liability to the bank.
+   - **High-confidence fraud (`P ≥ 0.85`):** Blocked immediately.
 4. **Adverse Action Explanations:** For any challenged or declined payment, C++ TreeSHAP generates human-readable reason codes (e.g., "Velocity spike: 14 attempts in 5m") for fraud analysts and regulatory compliance.
 5. **Delayed-Feedback Drift Loop:** As chargeback disputes settle 30–120 days later via banking clearing networks, background monitors (Evidently AI) evaluate feature drift (Wasserstein distance) to flag emerging attack waves.
 
@@ -150,22 +139,26 @@ flowchart TD
 
 ### Dual-Tier Feature Store Architecture (Feast + DuckDB + Redis)
 In fraud detection, **data leakage** is the number one cause of production model failure. If an offline training query calculates card velocity (such as "purchases made today") using end-of-day tables, the model accidentally cheats by seeing future transactions that would not have existed at checkout time.
-- **Offline Analytical Tier (DuckDB):** Managed via Feast to execute exact **as-of point-in-time temporal joins** between transactions and identity histories. Features are strictly computed using data timestamped prior to transaction event time ($t_0$), eliminating future lookahead bias.
+- **Offline Analytical Tier (DuckDB):** Managed via Feast to execute exact **as-of point-in-time temporal joins** between transactions and identity histories. Features are strictly computed using data timestamped prior to transaction event time (`t_0`), eliminating future lookahead bias.
 - **Online In-Memory Tier (Redis 7):** Pre-computes and stores cardholder velocity metrics: rolling transaction counts over short windows (last 5 minutes, 1 hour, and 24 hours) and recency indicators (days elapsed since last observed transaction for that cardholder). Hydrates live inference vectors with **sub-5ms key retrieval latency** under concurrent load.
 - **Resilient In-Memory Fallback:** If Redis is offline or the service runs in standalone mode (such as Hugging Face Spaces), the engine automatically falls back to an in-memory feature cache with zero downtime and complete schema parity.
 
 ### Dynamic Value-Aware Cost Router with Conformal Risk Bounds
-Instead of treating model probability $\hat{p}$ as an academic binary classification score, the platform models payment routing as a **Bayesian Cost Minimization problem**:
+Instead of treating model probability `p̂` as an academic binary classification score, the platform models payment routing as a **Bayesian Cost Minimization problem**:
 
-$$\mathbb{E}[\text{Cost}] = \hat{p} \cdot (1 - \hat{y}) \cdot L_{FN}(V) + (1 - \hat{p}) \cdot \hat{y} \cdot L_{FP}$$
+```math
+\mathbb{E}[\text{Cost}] = \hat{p} \cdot (1 - \hat{y}) \cdot L_{FN}(V) + (1 - \hat{p}) \cdot \hat{y} \cdot L_{FP}
+```
 
-Where transaction amount $V$ governs asymmetric financial risk:
-- $L_{FP} = \$0.05$ (Authentication challenge fee / customer friction)
-- $L_{FN}(V) = V + \$25.00$ (Loss of transaction principal + dispute fee)
+Where transaction amount `V` governs asymmetric financial risk:
+- **Authentication challenge fee (`L_FP`):** ~$0.05 per verified transaction.
+- **Missed fraud loss (`L_FN(V)`):** Loss of transaction principal `V` plus mandatory non-refundable chargeback fee (~$25.00).
 
 Equating marginal expected losses yields the **value-dependent optimal threshold curve**:
 
-$$\tau^*(V) = \frac{L_{FP}}{L_{FP} + (V + \$25.00)}$$
+```math
+\tau^*(V) = \frac{L_{FP}}{L_{FP} + (V + 25.00)}
+```
 
 ```
   Fraud Probability p
@@ -185,18 +178,20 @@ $$\tau^*(V) = \frac{L_{FP}}{L_{FP} + (V + \$25.00)}$$
            $10                    $100                   $1,000    Transaction Value ($V)
 ```
 
-- **EMV 3DS 2.2 Liability Shift Protocol:** Transactions falling in the challenge zone $[\tau^*(V), 0.85)$ trigger an interactive biometric or SMS OTP challenge. Upon successful cardholder authentication, legal fraud liability transfers from merchant to card issuer under global EMVCo rules.
-- **Conformal Risk Control (PAC Bounds):** In real-world finance, risk managers cannot rely on model probabilities alone because calibration can drift. Conformal prediction provides a distribution-free mathematical guarantee (**Probably Approximately Correct / PAC bounds**): with 99% statistical confidence, the false discovery rate (approved transactions that turn out to be fraud) is strictly bounded below $\alpha = 0.05$:
+- **EMV 3DS 2.2 Liability Shift Protocol:** Transactions falling in the challenge zone `[τ*(V), 0.85)` trigger an interactive biometric or SMS OTP challenge. Upon successful cardholder authentication, legal fraud liability transfers from merchant to card issuer under global EMVCo rules.
+- **Conformal Risk Control (PAC Bounds):** In real-world finance, risk managers cannot rely on model probabilities alone because calibration can drift. Conformal prediction provides a distribution-free mathematical guarantee (**Probably Approximately Correct / PAC bounds**): with 99% statistical confidence, the false discovery rate (approved transactions that turn out to be fraud) is strictly bounded below `α = 0.05`:
 
-$$\mathbb{P}\left(\text{FDR}(\tau^*) \le \alpha\right) \ge 1 - \delta$$
+```math
+\mathbb{P}\left(\text{FDR}(\tau^*) \le \alpha\right) \ge 1 - \delta
+```
 
 ### Real-Time TreeSHAP Attribution and Delayed-Feedback Drift Monitoring
 - **C++ TreeSHAP Reason Codes:** Financial regulations (such as the US Fair Credit Reporting Act and Equal Credit Opportunity Act) require merchants and lenders to give specific reasons when an adverse action (challenge or decline) is taken. In under 2 milliseconds, native C++ TreeSHAP decomposes the decision tree ensemble into exact top-3 human-readable factors (e.g., `VELOCITY_BURST_5M_EXCEEDED`, `HIGH_RISK_EMAIL_DOMAIN`, `ADDR_MISMATCH_SUSPICIOUS`) for real-time fraud analyst review.
 - **The 120-Day Delayed Feedback Challenge:** When a stolen card is used, the legitimate owner typically doesn't notice until their monthly card statement arrives **30 to 120 days later**. An engine that waits for verified chargeback labels to detect model drift will be blind to new attack rings for months. The platform models this maturity lifecycle across 4 distinct stages:
-  1. *Immediate Authorization ($t_0$):* Real-time scoring and decision routing.
-  2. *Batch Settlement ($t_0 + 3\text{d}$):* Network capture and initial transaction reconciliation.
-  3. *Chargeback Window ($t_0 + 30-60\text{d}$):* Consumer dispute initiation and evidence submission.
-  4. *Arbitration Settlement ($t_0 + 120\text{d}$):* Final ground-truth chargeback adjudication.
+  1. *Immediate Authorization (`t_0`):* Real-time scoring and decision routing.
+  2. *Batch Settlement (`t_0 + 3d`):* Network capture and initial transaction reconciliation.
+  3. *Chargeback Window (`t_0 + 30-60d`):* Consumer dispute initiation and evidence submission.
+  4. *Arbitration Settlement (`t_0 + 120d`):* Final ground-truth chargeback adjudication.
 - **Evidently AI Unsupervised Drift Monitoring:** Tracks distribution shifts across streaming windows before labels mature:
   - **Wasserstein-1 (Earth Mover's) Distance:** Measures physical distribution drift in numerical features (transaction dollar amounts and velocity spikes).
   - **Jensen-Shannon Divergence:** Monitors shifts in categorical features (email domain providers, browser user agents, and device operating systems).
@@ -204,17 +199,17 @@ $$\mathbb{P}\left(\text{FDR}(\tau^*) \le \alpha\right) \ge 1 - \delta$$
 - **Simulated Drift Wave Injection:** Risk operators can inject synthetic multi-feature drift waves directly from the dashboard to stress-test automated retraining triggers and alert ceilings.
 
 ### Production Latency Benchmark and Systems Micro-Optimizations
-Payment gateways enforce strict sub-25 millisecond latency budgets ($p95 < 25\text{ms}$). If a fraud engine is slow, the checkout screen times out and the merchant loses legitimate sales.
+Payment gateways enforce strict sub-25 millisecond latency budgets (`p95 < 25ms`). If a fraud engine is slow, the checkout screen times out and the merchant loses legitimate sales.
 
 #### Verified Locust Load Benchmark (50 Concurrent Virtual Users, 30s Sustained Load)
 
 | Metric | Measured Latency | Contractual SLA Target | Operating Headroom | Verification Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **p50 (Median)** | **1.00 ms** | $< 10.00\text{ ms}$ | 90.0% | PASS |
-| **p90** | **13.00 ms** | $< 20.00\text{ ms}$ | 35.0% | PASS |
-| **p95 (Production SLA)** | **13.00 ms** | **$< 25.00\text{ ms}$** | **48.0%** | **PASS** |
-| **p99 (Tail Latency)** | **14.00 ms** | $< 45.00\text{ ms}$ | 68.9% | PASS |
-| **Max Latency** | **21.00 ms** | $< 100.00\text{ ms}$ | 79.0% | PASS |
+| **p50 (Median)** | **1.00 ms** | < 10.00 ms | 90.0% | PASS |
+| **p90** | **13.00 ms** | < 20.00 ms | 35.0% | PASS |
+| **p95 (Production SLA)** | **13.00 ms** | **< 25.00 ms** | **48.0%** | **PASS** |
+| **p99 (Tail Latency)** | **14.00 ms** | < 45.00 ms | 68.9% | PASS |
+| **Max Latency** | **21.00 ms** | < 100.00 ms | 79.0% | PASS |
 | **HTTP Error Rate** | **0.00% (0 / 698)** | 0.00% | 100.0% | PASS |
 
 > *Note on Percentiles:* `p50` is median response time (half of all payments scored in 1.00ms). `p95` means 95% of all incoming payments received an authorization decision in 13.00ms or less.
@@ -233,12 +228,12 @@ Payment gateways enforce strict sub-25 millisecond latency budgets ($p95 < 25\te
 A key differentiator of this system is the deliberate engineering decisions made when addressing counter-intuitive production behaviors:
 
 ### The "Double-Penalty" Effect of Cost-Sensitive Training Weights
-- *The Intuitive Idea:* If a $2,000 fraud hurts more than a $20 fraud, why not weight training examples proportionally to dollar value during model training ($w_i = 1 + \alpha \cdot \text{amt}_i$)?
-- *The Production Reality:* On the 92,453 holdout transactions, loss-weighted models exhibited higher overall loss ($+\$12,400$). Because the downstream Dynamic Cost Router *already* lowers decision thresholds for large transactions, weighting the training data penalizes large purchases twice. The model became overly paranoid, triggering false declines on high-value loyal customers buying genuine flights or electronics. The solution: keep model training objective balanced, and handle dollar-value adaptation exclusively at the decision routing layer.
+- *The Intuitive Idea:* If a $2,000 fraud hurts more than a $20 fraud, why not weight training examples proportionally to dollar value during model training (`w_i = 1 + α · amt_i`)?
+- *The Production Reality:* On the 92,453 holdout transactions, loss-weighted models exhibited higher overall loss (+$12,400). Because the downstream Dynamic Cost Router *already* lowers decision thresholds for large transactions, weighting the training data penalizes large purchases twice. The model became overly paranoid, triggering false declines on high-value loyal customers buying genuine flights or electronics. The solution: keep model training objective balanced, and handle dollar-value adaptation exclusively at the decision routing layer.
 
 ### The Probability Calibration Trap in Tri-State Payment Routing
 - *The Intuitive Idea:* Academic machine learning textbooks recommend calibrating probabilities (e.g. via Platt Scaling or Isotonic Regression) so predicted risk scores match empirical fraud rates.
-- *The Production Reality:* Standard calibration algorithms compress extreme probability distributions toward the empirical base rate (~3.5%). In our 3-state routing architecture (Approve, 3DS Challenge, Decline), this compression artificially suppressed borderline suspicious scores from 8.9% down to 3.6%. These transactions bypassed the low-cost ($0.05) 3DS challenge buffer straight into auto-approvals, unleashing a 3.5x explosion in fraud leakage ($35k -> $122k) and breaching the Mastercard 1.0% chargeback cap. Retaining uncompressed tree-ensemble scores preserved clear rank separation and superior financial economics.
+- *The Production Reality:* Standard calibration algorithms compress extreme probability distributions toward the empirical base rate (~3.5%). In our 3-state routing architecture (Approve, 3DS Challenge, Decline), this compression artificially suppressed borderline suspicious scores from 8.9% down to 3.6%. These transactions bypassed the low-cost (~$0.05) 3DS challenge buffer straight into auto-approvals, unleashing a 3.5x explosion in fraud leakage ($35,000 to $122,000) and breaching the Mastercard 1.0% chargeback cap. Retaining uncompressed tree-ensemble scores preserved clear rank separation and superior financial economics.
 
 ---
 
@@ -248,13 +243,13 @@ The user interface is a purpose-built FinTech risk operations console inspired b
 
 1. **Real-Time Risk Operations Feed:**
    - Live 8–10 tx/s streaming replay from the IEEE-CIS holdout dataset with visual fraud probability gauges.
-   - Dynamic **Financial Impact and Comparative Loss Card** displaying live dollars preserved vs. static $\tau = 0.50$.
+   - Dynamic **Financial Impact and Comparative Loss Card** displaying live dollars preserved vs. static τ = 0.50.
    - Ground-Truth Dispute Queue allowing human risk investigators to adjudicate chargebacks with instant state synchronization.
    - Attack Scenario Injection Modal: Inject burst attacks (0–20 tx/5m velocity sliders), cross-border card testing, and device spoofing.
 2. **3DS Dynamic Policy Simulator:**
-   - Interactive Bayesian Policy Spectrum Belt with a vertical guide needle projecting down from the floating threshold $\tau^*(V)$.
-   - Real-time parameter tweaking ($L_{FP}$, $L_{FN}$, $V$) with instant recalculation of approval zones.
-   - Quantitative TreeSHAP factor attribution bars ($82\%$, $56\%$, $32\%$ proportional impact).
+   - Interactive Bayesian Policy Spectrum Belt with a vertical guide needle projecting down from the floating threshold τ*(V).
+   - Real-time parameter tweaking (`L_FP`, `L_FN`, `V`) with instant recalculation of approval zones.
+   - Quantitative TreeSHAP factor attribution bars (82%, 56%, 32% proportional impact).
 3. **Drift and Model Health Center:**
    - Interactive Multi-Wasserstein Feature Drift timeline with high-contrast tooltip inspections.
    - Plain-English hover explanation badges on all Drift KPIs (Wasserstein-1, Jensen-Shannon, PR-AUC).
