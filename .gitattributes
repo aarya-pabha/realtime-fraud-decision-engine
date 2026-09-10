@@ -1,0 +1,4 @@
+# Ensure model files and shell scripts always keep LF line endings
+models/*.txt text eol=lf
+Dockerfile text eol=lf
+*.sh text eol=lf

@@ -88,8 +88,8 @@ def _stream_worker():
         _HOLDOUT_CACHE = _load_holdout_batch(batch_size=10000)
 
     while _STREAM_ACTIVE and _HOLDOUT_CACHE:
-        # Sleep 0.08s - 0.14s to stream at ~7 to 10 transactions per second
-        time.sleep(random.uniform(0.08, 0.14))
+        # Sleep 1.0s - 1.8s for smooth UI telemetry without CPU contention
+        time.sleep(random.uniform(1.0, 1.8))
         rec = _HOLDOUT_CACHE[_HOLDOUT_INDEX % len(_HOLDOUT_CACHE)]
         _HOLDOUT_INDEX += 1
         
