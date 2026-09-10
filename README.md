@@ -1,3 +1,14 @@
+---
+title: Real-Time Transaction Fraud Decisioning Engine
+emoji: 🛡️
+colorFrom: emerald
+colorTo: slate
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 <div align="center">
 
 # Real-Time Transaction Fraud Decisioning Engine
