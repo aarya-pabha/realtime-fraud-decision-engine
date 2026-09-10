@@ -1,0 +1,101 @@
+{
+  "scorecard": [
+    {
+      "Policy": "1. Naive Approve-All (No ML)",
+      "Total Loss ($)": "$567,991.62",
+      "Net Saved vs Base ($)": "$0.00 (Ref)",
+      "ROI vs Base (%)": "0.0%",
+      "Chargeback Ratio": "3.48%",
+      "Visa/MC Compliance": "FAILED (VAMP Alert)",
+      "Friction Rate": "0.00%"
+    },
+    {
+      "Policy": "2. Standard Static ML (tau = 0.50)",
+      "Total Loss ($)": "$338,745.87",
+      "Net Saved vs Base ($)": "$0.00 (Base)",
+      "ROI vs Base (%)": "0.0%",
+      "Chargeback Ratio": "1.79%",
+      "Visa/MC Compliance": "FAILED (VAMP Alert)",
+      "Friction Rate": "1.84%"
+    },
+    {
+      "Policy": "3. Tuned Static ML (tau = 0.17)",
+      "Total Loss ($)": "$241,565.54",
+      "Net Saved vs Base ($)": "$97,180.32",
+      "ROI vs Base (%)": "28.7%",
+      "Chargeback Ratio": "0.92%",
+      "Visa/MC Compliance": "PASS",
+      "Friction Rate": "10.84%"
+    },
+    {
+      "Policy": "4. Dynamic Cost Router + 3DS2 (Novelty #2)",
+      "Total Loss ($)": "$95,688.32",
+      "Net Saved vs Base ($)": "$243,057.54",
+      "ROI vs Base (%)": "71.8%",
+      "Chargeback Ratio": "0.40%",
+      "Visa/MC Compliance": "ELITE COMPLIANCE (<0.5%)",
+      "Friction Rate": "7.50%"
+    }
+  ],
+  "spend_tiers": [
+    {
+      "Spend Tier": "Micro Spend ($0 - $25)",
+      "Count": "7,526",
+      "Fraud Events": "602",
+      "Approved": "5,166",
+      "3DS Step-Up": "1,939",
+      "Declined": "421",
+      "Static Loss": "$9,642.59",
+      "Dynamic Loss": "$4,963.93",
+      "Net Saved": "$4,678.66"
+    },
+    {
+      "Spend Tier": "Low Spend ($25 - $100)",
+      "Count": "49,125",
+      "Fraud Events": "1,415",
+      "Approved": "35,704",
+      "3DS Step-Up": "12,498",
+      "Declined": "923",
+      "Static Loss": "$66,859.16",
+      "Dynamic Loss": "$30,388.57",
+      "Net Saved": "$36,470.59"
+    },
+    {
+      "Spend Tier": "Mid Spend ($100 - $500)",
+      "Count": "32,026",
+      "Fraud Events": "1,002",
+      "Approved": "15,634",
+      "3DS Step-Up": "15,974",
+      "Declined": "418",
+      "Static Loss": "$137,172.19",
+      "Dynamic Loss": "$38,549.55",
+      "Net Saved": "$98,622.64"
+    },
+    {
+      "Spend Tier": "High Spend ($500 - $2,000)",
+      "Count": "3,380",
+      "Fraud Events": "188",
+      "Approved": "190",
+      "3DS Step-Up": "3,105",
+      "Declined": "85",
+      "Static Loss": "$107,098.56",
+      "Dynamic Loss": "$17,726.40",
+      "Net Saved": "$89,372.15"
+    },
+    {
+      "Spend Tier": "Ultra-High Spend ($2,000+)",
+      "Count": "396",
+      "Fraud Events": "8",
+      "Approved": "19",
+      "3DS Step-Up": "376",
+      "Declined": "1",
+      "Static Loss": "$17,973.37",
+      "Dynamic Loss": "$4,059.87",
+      "Net Saved": "$13,913.50"
+    }
+  ],
+  "net_savings_dollars": 243057.54329399992,
+  "cost_reduction_roi_pct": 71.75217946456107,
+  "dynamic_loss_dollars": 95688.32492600003,
+  "static_loss_dollars": 338745.86821999995
+}

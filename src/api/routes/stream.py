@@ -32,35 +32,52 @@ def _get_consumer():
     return _SCORING_CONSUMER
 
 def _load_holdout_batch(batch_size: int = 10000) -> List[Dict[str, Any]]:
-    """Loads a sequential batch of holdout transactions from DuckDB."""
+    """Loads a sequential batch of holdout transactions from DuckDB or parquet sample."""
     db_path = "feature_store.duckdb"
     if not os.path.exists(db_path) and os.path.exists(os.path.join("..", db_path)):
         db_path = os.path.join("..", db_path)
-    if not os.path.exists(db_path):
-        return []
+    if os.path.exists(db_path):
+        try:
+            con = duckdb.connect(db_path, read_only=True)
+            query = f"""
+            SELECT 
+                t.TransactionID,
+                t.TransactionDT,
+                t.TransactionAmt,
+                t.ProductCD,
+                t.card1, t.card2, t.card3, t.card4, t.card5, t.card6,
+                t.addr1, t.addr2,
+                t.P_emaildomain, t.R_emaildomain,
+                t.D1, t.D2, t.D15,
+                t.C1, t.C2, t.C3, t.C4, t.C5, t.C6, t.C7, t.C8, t.C9, t.C10, t.C11, t.C12, t.C13, t.C14,
+                i.DeviceType, i.DeviceInfo, i.id_30, i.id_31, i.id_33
+            FROM transactions t
+            LEFT JOIN identities i ON t.TransactionID = i.TransactionID
+            WHERE t.TransactionDT >= 13046400
+            ORDER BY t.TransactionDT ASC
+            LIMIT {batch_size};
+            """
+            records = con.execute(query).to_arrow_table().to_pylist()
+            con.close()
+            if records:
+                return records
+        except Exception as e:
+            print(f"[_load_holdout_batch] DuckDB load failed: {e}")
 
-    con = duckdb.connect(db_path, read_only=True)
-    query = f"""
-    SELECT 
-        t.TransactionID,
-        t.TransactionDT,
-        t.TransactionAmt,
-        t.ProductCD,
-        t.card1, t.card2, t.card3, t.card4, t.card5, t.card6,
-        t.addr1, t.addr2,
-        t.P_emaildomain, t.R_emaildomain,
-        t.D1, t.D2, t.D15,
-        t.C1, t.C2, t.C3, t.C4, t.C5, t.C6, t.C7, t.C8, t.C9, t.C10, t.C11, t.C12, t.C13, t.C14,
-        i.DeviceType, i.DeviceInfo, i.id_30, i.id_31, i.id_33
-    FROM transactions t
-    LEFT JOIN identities i ON t.TransactionID = i.TransactionID
-    WHERE t.TransactionDT >= 13046400
-    ORDER BY t.TransactionDT ASC
-    LIMIT {batch_size};
-    """
-    records = con.execute(query).to_arrow_table().to_pylist()
-    con.close()
-    return records
+    parquet_path = os.path.join("data", "holdout_stream_sample.parquet")
+    if not os.path.exists(parquet_path) and os.path.exists(os.path.join("..", parquet_path)):
+        parquet_path = os.path.join("..", parquet_path)
+    if os.path.exists(parquet_path):
+        try:
+            con = duckdb.connect(":memory:")
+            p_clean = parquet_path.replace("\\", "/")
+            records = con.execute(f"SELECT * FROM '{p_clean}' LIMIT {batch_size}").to_arrow_table().to_pylist()
+            con.close()
+            return records
+        except Exception as e:
+            print(f"[_load_holdout_batch] Parquet sample load failed: {e}")
+
+    return []
 
 def _stream_worker():
     global _HOLDOUT_INDEX, _HOLDOUT_CACHE, _STREAM_ACTIVE

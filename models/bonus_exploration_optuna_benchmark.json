@@ -1,0 +1,120 @@
+{
+  "scorecard": [
+    {
+      "Architecture Model": "0. Baseline Single LightGBM (Phase 3)",
+      "OOT ROC-AUC": "0.9003",
+      "OOT PR-AUC": "0.5063",
+      "Total Loss ($)": "$115,237.51",
+      "Net Saved ($)": "$223,508.36",
+      "CB Ratio": "0.42%",
+      "p50 Latency": "2.53 ms",
+      "p95 Latency": "3.20 ms",
+      "p99 Latency": "3.97 ms",
+      "Production Verdict": "Optimal: High SOTA AUC, Sub-4ms SLA, Single Model"
+    },
+    {
+      "Architecture Model": "Track A: Optuna Fast-Path Cascade",
+      "OOT ROC-AUC": "0.9003",
+      "OOT PR-AUC": "0.5063",
+      "Total Loss ($)": "$115,237.51",
+      "Net Saved ($)": "$223,508.36",
+      "CB Ratio": "0.42%",
+      "p50 Latency": "4.44 ms",
+      "p95 Latency": "5.62 ms",
+      "p99 Latency": "7.38 ms",
+      "Production Verdict": "Gatekeeper <0.2ms; Fast-path throughput booster"
+    },
+    {
+      "Architecture Model": "Track B: Optuna CatBoost Blend",
+      "OOT ROC-AUC": "0.9023",
+      "OOT PR-AUC": "0.5052",
+      "Total Loss ($)": "$119,977.27",
+      "Net Saved ($)": "$218,768.60",
+      "CB Ratio": "0.23%",
+      "p50 Latency": "4.70 ms",
+      "p95 Latency": "6.18 ms",
+      "p99 Latency": "7.49 ms",
+      "Production Verdict": "Highest AUC (+0.0020), but doubles inference latency"
+    },
+    {
+      "Architecture Model": "Track C: Optuna Isolation Forest Hybrid",
+      "OOT ROC-AUC": "0.8980",
+      "OOT PR-AUC": "0.4993",
+      "Total Loss ($)": "$113,669.63",
+      "Net Saved ($)": "$225,076.24",
+      "CB Ratio": "0.41%",
+      "p50 Latency": "18.22 ms",
+      "p95 Latency": "21.95 ms",
+      "p99 Latency": "25.58 ms",
+      "Production Verdict": "Lowest loss ($112.0k), best for zero-day defense"
+    }
+  ],
+  "best_params": {
+    "track_a": {
+      "num_leaves": 6,
+      "max_depth": 3,
+      "learning_rate": 0.10349154179321332,
+      "num_boost_round": 30,
+      "q_safe": 0.0036210622617823774
+    },
+    "track_b": {
+      "depth": 6,
+      "l2_leaf_reg": 2.5347171131856236,
+      "learning_rate": 0.04296328585098912,
+      "iterations": 220,
+      "w_lgb": 0.8379712115760958
+    },
+    "track_c": {
+      "n_estimators": 120,
+      "max_samples": 3000,
+      "contamination": 0.036264069816550344,
+      "w_iso": 0.07557861855309374
+    }
+  },
+  "metrics": {
+    "baseline": {
+      "roc_auc": 0.9003285498227485,
+      "pr_auc": 0.5063115776072146,
+      "loss": 115237.51329300003,
+      "latencies": {
+        "p50_ms": 2.526149997720495,
+        "p95_ms": 3.1987949965696316,
+        "p99_ms": 3.970261005160864,
+        "mean_ms": 2.697673800008488
+      }
+    },
+    "track_a": {
+      "roc_auc": 0.9003285498227485,
+      "pr_auc": 0.5063115776072146,
+      "loss": 115237.51329300003,
+      "latencies": {
+        "p50_ms": 4.437149997102097,
+        "p95_ms": 5.618289997801185,
+        "p99_ms": 7.381231013714566,
+        "mean_ms": 4.6827171999102575
+      }
+    },
+    "track_b": {
+      "roc_auc": 0.9023128846525257,
+      "pr_auc": 0.5051641467598011,
+      "loss": 119977.27457700002,
+      "latencies": {
+        "p50_ms": 4.70264999603387,
+        "p95_ms": 6.18318999040639,
+        "p99_ms": 7.49062599003082,
+        "mean_ms": 5.027238500159001
+      }
+    },
+    "track_c": {
+      "roc_auc": 0.8980273905031146,
+      "pr_auc": 0.4993065050981869,
+      "loss": 113669.63325200003,
+      "latencies": {
+        "p50_ms": 18.224150000605732,
+        "p95_ms": 21.9503049935156,
+        "p99_ms": 25.578719005279705,
+        "mean_ms": 18.780099350122327
+      }
+    }
+  }
+}

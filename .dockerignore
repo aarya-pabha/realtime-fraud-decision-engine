@@ -31,6 +31,7 @@ data/interim/
 data/external/
 data/*.html
 data/*.parquet
+!data/holdout_stream_sample.parquet
 
 # Local environment secrets & config
 .env

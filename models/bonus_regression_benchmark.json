@@ -1,0 +1,67 @@
+{
+  "scorecard": [
+    {
+      "Paradigm / Model": "0. Baseline Binary Classifier + Cost Router",
+      "OOT ROC-AUC": "0.9003",
+      "OOT PR-AUC": "0.5063",
+      "Total Loss ($)": "$115,237.51",
+      "Net Saved ($)": "$223,508.36",
+      "CB Ratio": "0.42%",
+      "p50 Latency": "2.54 ms",
+      "p95 Latency": "3.30 ms",
+      "p99 Latency": "4.07 ms",
+      "Architectural Verdict": "Optimal Balance: Direct probability calibration + dynamic cost matrix"
+    },
+    {
+      "Paradigm / Model": "Reg-1: Optuna Tweedie Compound Loss Regressor",
+      "OOT ROC-AUC": "0.8587",
+      "OOT PR-AUC": "0.2663",
+      "Total Loss ($)": "$197,693.11",
+      "Net Saved ($)": "$141,052.76",
+      "CB Ratio": "0.10%",
+      "p50 Latency": "2.57 ms",
+      "p95 Latency": "3.08 ms",
+      "p99 Latency": "3.76 ms",
+      "Architectural Verdict": "Direct dollar output (p=1.41); Excellent speed"
+    },
+    {
+      "Paradigm / Model": "Reg-2: Optuna Two-Stage Hurdle (Clf x Gamma)",
+      "OOT ROC-AUC": "0.8253",
+      "OOT PR-AUC": "0.1564",
+      "Total Loss ($)": "$373,905.94",
+      "Net Saved ($)": "$-35,160.07",
+      "CB Ratio": "0.05%",
+      "p50 Latency": "5.28 ms",
+      "p95 Latency": "6.53 ms",
+      "p99 Latency": "8.47 ms",
+      "Architectural Verdict": "Decouples frequency & severity; requires dual model calls"
+    },
+    {
+      "Paradigm / Model": "Reg-3: Huber Loss Dispute Hazard Regressor",
+      "OOT ROC-AUC": "0.8349",
+      "OOT PR-AUC": "0.4237",
+      "Total Loss ($)": "$152,546.85",
+      "Net Saved ($)": "$186,199.02",
+      "CB Ratio": "0.48%",
+      "p50 Latency": "2.63 ms",
+      "p95 Latency": "3.30 ms",
+      "p99 Latency": "4.00 ms",
+      "Architectural Verdict": "Robust loss penalizer; high precision on extreme amounts"
+    }
+  ],
+  "best_params": {
+    "tweedie": {
+      "tweedie_variance_power": 1.4121780831931536,
+      "num_leaves": 135,
+      "max_depth": 12,
+      "learning_rate": 0.07721340034517322,
+      "subsample": 0.7390046601106091,
+      "colsample_bytree": 0.7389986300840506
+    },
+    "hurdle": {
+      "num_leaves": 33,
+      "max_depth": 10,
+      "learning_rate": 0.08276096024435112
+    }
+  }
+}

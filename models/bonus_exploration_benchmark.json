@@ -1,0 +1,109 @@
+{
+  "scorecard": [
+    {
+      "Architecture Model": "0. Baseline Single LightGBM",
+      "OOT ROC-AUC": "0.9003",
+      "OOT PR-AUC": "0.5063",
+      "Total Loss ($)": "$115,237.51",
+      "Net Saved ($)": "$223,508.36",
+      "CB Ratio": "0.42%",
+      "p50 Latency": "2.60 ms",
+      "p95 Latency": "3.51 ms",
+      "Production Verdict": "High SOTA accuracy, clean maintainability"
+    },
+    {
+      "Architecture Model": "Track A: Two-Stage Fast-Path Cascade",
+      "OOT ROC-AUC": "0.9003",
+      "OOT PR-AUC": "0.5063",
+      "Total Loss ($)": "$115,237.51",
+      "Net Saved ($)": "$223,508.36",
+      "CB Ratio": "0.42%",
+      "p50 Latency": "22.57 ms",
+      "p95 Latency": "26.22 ms",
+      "Production Verdict": "Bypasses 70% traffic to <1ms; Best SLA optimization"
+    },
+    {
+      "Architecture Model": "Track B: Dual Blend (LGBM + CatBoost)",
+      "OOT ROC-AUC": "0.9019",
+      "OOT PR-AUC": "0.5022",
+      "Total Loss ($)": "$137,935.95",
+      "Net Saved ($)": "$200,809.92",
+      "CB Ratio": "0.17%",
+      "p50 Latency": "4.48 ms",
+      "p95 Latency": "5.62 ms",
+      "Production Verdict": "Marginal AUC gain; doubles inference latency & complexity"
+    },
+    {
+      "Architecture Model": "Track C: Hybrid Outlier (LGBM + IsoForest)",
+      "OOT ROC-AUC": "0.8937",
+      "OOT PR-AUC": "0.4954",
+      "Total Loss ($)": "$113,298.17",
+      "Net Saved ($)": "$225,447.70",
+      "CB Ratio": "0.40%",
+      "p50 Latency": "15.57 ms",
+      "p95 Latency": "18.81 ms",
+      "Production Verdict": "Catches 86.7% high-ticket fraud; good cold-start backup"
+    }
+  ],
+  "track_a_results": {
+    "track": "Track A: Two-Stage Fast-Path Cascade",
+    "fast_path_traffic_pct": 0.0,
+    "deep_path_traffic_pct": 100.0,
+    "fast_path_missed_frauds": 0,
+    "fast_path_leakage_pct": 0.0,
+    "roc_auc": 0.9003285498227485,
+    "pr_auc": 0.5063115776072146,
+    "total_financial_loss_dollars": 115237.51329300003,
+    "net_savings_dollars": 223508.35670699997,
+    "chargeback_ratio_pct": 0.41750943722756423
+  },
+  "track_b_results": {
+    "track": "Track B: Dual-Model Blend (70% LGBM + 30% CatBoost)",
+    "roc_auc": 0.9018650633772717,
+    "pr_auc": 0.5022149249955152,
+    "brier_score": 0.04346605111507181,
+    "lgb_inference_time_ms": 0.0029891123057533666,
+    "cat_inference_time_ms": 0.002823521140535019,
+    "total_inference_time_ms": 0.005812633446288386,
+    "total_financial_loss_dollars": 137935.94573500002,
+    "net_savings_dollars": 200809.92426499998,
+    "chargeback_ratio_pct": 0.17089764529003926
+  },
+  "track_c_results": {
+    "track": "Track C: Hybrid Unsupervised Outlier Scorer",
+    "iso_forest_standalone_roc_auc": 0.6001181822234543,
+    "iso_forest_standalone_pr_auc": 0.04514985903809238,
+    "high_value_fraud_recall_pct": 86.66666666666667,
+    "hybrid_fused_roc_auc": 0.8936826910907721,
+    "hybrid_fused_pr_auc": 0.49542609700182466,
+    "total_financial_loss_dollars": 113298.16979600003,
+    "net_savings_dollars": 225447.70020399996,
+    "chargeback_ratio_pct": 0.3969584545661039
+  },
+  "latencies": {
+    "baseline": {
+      "p50_ms": 2.6031499946839176,
+      "p95_ms": 3.5080650079180487,
+      "p99_ms": 4.38608899974497,
+      "mean_ms": 2.859820999969088
+    },
+    "track_a": {
+      "p50_ms": 22.572599998966325,
+      "p95_ms": 26.216349986498244,
+      "p99_ms": 29.636474005674245,
+      "mean_ms": 23.218661249775323
+    },
+    "track_b": {
+      "p50_ms": 4.475649999221787,
+      "p95_ms": 5.618929995398502,
+      "p99_ms": 7.367730008263606,
+      "mean_ms": 4.749168749935052
+    },
+    "track_c": {
+      "p50_ms": 15.574949997244403,
+      "p95_ms": 18.812229991453933,
+      "p99_ms": 22.081859007303137,
+      "mean_ms": 15.997646449854074
+    }
+  }
+}
