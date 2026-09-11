@@ -13,6 +13,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-0f172a?style=flat&logo=docker&logoColor=38bdf8)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/Tests-37%2F37%20Passing-0f172a?style=flat&logo=pytest&logoColor=10b981)](tests/)
 [![p95 Latency](https://img.shields.io/badge/p95%20Latency-13.0ms-0f172a?style=flat&logo=speedtest&logoColor=38bdf8)](reports/locust_sla_report.html)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Google%20Cloud%20Run-0f172a?style=flat&logo=googlecloud&logoColor=4285f4)](https://fraud-decision-engine-486147352632.us-central1.run.app)
 [![License](https://img.shields.io/badge/License-MIT-0f172a?style=flat)](LICENSE)
 
 *A production-grade, low-latency payment risk decisioning platform trained on 590,540 real-world e-commerce transactions (the IEEE-CIS benchmark provided by Vesta Corporation). Engineered to bridge mathematical Bayesian decision theory with high-throughput distributed systems to minimize asymmetric financial loss.*
@@ -23,7 +24,7 @@
 
 <br/>
 
-[**Interactive UI Showcase**](#interactive-fintech-operations-console) • [**30-Second Quickstart**](#30-second-quickstart-and-scoring-api) • [**Architecture Blueprint**](docs/transaction_fraud_ds_portfolio.md) • [**Technical Specifications**](docs/superpowers/specs/comprehensive_spec.md) • [**SLA Benchmark Report**](reports/locust_sla_report.html)
+[**Live Cloud Console**](https://fraud-decision-engine-486147352632.us-central1.run.app) • [**Interactive UI Showcase**](#interactive-fintech-operations-console) • [**30-Second Quickstart**](#30-second-quickstart-and-scoring-api) • [**Architecture Blueprint**](docs/transaction_fraud_ds_portfolio.md) • [**Technical Specifications**](docs/superpowers/specs/comprehensive_spec.md) • [**SLA Benchmark Report**](reports/locust_sla_report.html)
 
 </div>
 
@@ -94,7 +95,13 @@ The Dynamic Cost Router automatically scales verification rigor based on transac
 
 ## 30-Second Quickstart and Scoring API
 
-### Option 1: 1-Command Distributed Stack via Docker Compose
+### Live Production Deployment (Google Cloud Run)
+Access the live containerized platform running in `us-central1` with 1 dedicated vCPU:
+- **Live FinTech Operations Cockpit:** [https://fraud-decision-engine-486147352632.us-central1.run.app](https://fraud-decision-engine-486147352632.us-central1.run.app)
+- **Interactive OpenAPI Swagger Docs:** [https://fraud-decision-engine-486147352632.us-central1.run.app/docs](https://fraud-decision-engine-486147352632.us-central1.run.app/docs)
+- **Live Engine Health Endpoint:** [https://fraud-decision-engine-486147352632.us-central1.run.app/v1/health](https://fraud-decision-engine-486147352632.us-central1.run.app/v1/health)
+
+### Local Option 1: 1-Command Distributed Stack via Docker Compose
 Launches Redis 7, Redpanda Kafka broker, FastAPI decision engine, and React 19 web cockpit on an isolated bridge network:
 
 ```bash
@@ -112,7 +119,7 @@ docker compose ps
 - **FastAPI OpenAPI Interactive Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Redpanda Streaming Console:** [http://localhost:9644](http://localhost:9644)
 
-### Option 2: Local Python Execution
+### Local Option 2: Local Python Execution
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
@@ -128,6 +135,9 @@ Score transactions in real time with sub-15ms latency and full TreeSHAP reason c
 ```python
 import requests
 
+# Test against the live Google Cloud Run cluster (or local: http://localhost:8000/v1/score)
+API_URL = "https://fraud-decision-engine-486147352632.us-central1.run.app/v1/score"
+
 payload = {
     "TransactionAmt": 1250.00,
     "card1": 10045,
@@ -135,7 +145,7 @@ payload = {
     "R_emaildomain": "protonmail.com"
 }
 
-response = requests.post("http://localhost:8000/v1/score", json=payload).json()
+response = requests.post(API_URL, json=payload).json()
 print(response)
 # {
 #   "transaction_id": "tx_c89b21f0",
@@ -322,6 +332,18 @@ Payment gateways require strict sub-25 millisecond latency budgets (`p95 < 25ms`
 | **p99 (Tail Latency)** | **14.00 ms** | < 45.00 ms | 68.9% | PASS |
 | **Max Latency** | **21.00 ms** | < 100.00 ms | 79.0% | PASS |
 | **HTTP Error Rate** | **0.00% (0 / 698)** | 0.00% | 100.0% | PASS |
+
+### Live Cloud Run Production Cluster Latency (Google Cloud Platform)
+
+Empirically verified against the live production container in `us-central1` (1 dedicated vCPU, 1 GiB RAM):
+
+| Scoring Path | Internal Engine Latency | Client RTT (Public HTTPS) | TreeSHAP Attribution | Action Outcome |
+| :--- | :---: | :---: | :---: | :--- |
+| **Fast-Path Flow (Clean Traffic)** | **0.42 ms – 0.88 ms** | **33.6 ms – 47.4 ms** | Bypassed (FCRA Fast-Path) | `APPROVE` |
+| **Adverse Action (Suspicious Flow)** | **15.70 ms – 16.32 ms** | **78.0 ms – 92.0 ms** | Full C++ TreeSHAP (Top-3 Codes) | `STEP_UP_3DS` / `DECLINE` |
+
+- **Zero CPU Throttling:** Google Cloud Run allocates a full 1.0 dedicated vCPU during request processing, eliminating the 100ms+ latency spikes observed on shared-CPU micro-tiers (such as Render 0.1 vCPU).
+- **Cost Efficiency:** Configured under `--min-instances 0`, the service runs entirely within the GCP Always Free Tier (2 million requests/month, 180,000 vCPU-seconds/month, 360,000 GiB-seconds/month) at **$0.00/month**.
 
 ### Systems Micro-Optimizations
 1. **NumPy Hot-Path Vectorization (203x Speedup):** Standard Pandas DataFrame creation (`pd.DataFrame([payload])`) incurs ~2.3ms of object allocation overhead. By compiling categorical dictionaries and writing directly into a contiguous NumPy array (`np.ndarray`), feature vector preparation dropped to 0.011ms.

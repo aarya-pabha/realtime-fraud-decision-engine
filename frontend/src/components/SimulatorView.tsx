@@ -119,34 +119,23 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({
 
           {/* Graphical Policy Spectrum Track */}
           <div className="relative pt-6 pb-2">
-            {/* Live Floating Needle Pin and Vertical Guide Line */}
+            {/* Live Floating Needle Pin */}
             {selectedTx && (
-              <>
-                <div 
-                  className="absolute top-0 -translate-x-1/2 flex flex-col items-center transition-all duration-500 z-20"
-                  style={{ 
-                    left: `${Math.min(97, Math.max(3, (selectedTx.fraud_probability ?? 0) * 100))}%` 
-                  }}
-                >
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-md text-white whitespace-nowrap ${
-                    selectedTx.action === 'APPROVE' ? 'bg-[#006323]' : selectedTx.action === 'STEP_UP_3DS' ? 'bg-amber-600' : 'bg-rose-600'
-                  }`}>
-                    P(Fraud) = {((selectedTx.fraud_probability ?? 0) * 100).toFixed(1)}%
-                  </span>
-                  <span className={`w-0 h-0 border-x-4 border-x-transparent border-t-4 ${
-                    selectedTx.action === 'APPROVE' ? 'border-t-[#006323]' : selectedTx.action === 'STEP_UP_3DS' ? 'border-t-amber-600' : 'border-t-rose-600'
-                  }`} />
-                </div>
-
-                {/* Vertical Needle Slicing Guide Line */}
-                <div 
-                  className="absolute top-5 bottom-2.5 -translate-x-1/2 w-0.5 border-l-2 border-dashed transition-all duration-500 z-10 pointer-events-none opacity-80"
-                  style={{ 
-                    left: `${Math.min(97, Math.max(3, (selectedTx.fraud_probability ?? 0) * 100))}%`,
-                    borderColor: selectedTx.action === 'APPROVE' ? '#006323' : selectedTx.action === 'STEP_UP_3DS' ? '#d97706' : '#e11d48'
-                  }}
-                />
-              </>
+              <div 
+                className="absolute top-0 -translate-x-1/2 flex flex-col items-center transition-all duration-500 z-20"
+                style={{ 
+                  left: `${Math.min(97, Math.max(3, (selectedTx.fraud_probability ?? 0) * 100))}%` 
+                }}
+              >
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-md text-white whitespace-nowrap ${
+                  selectedTx.action === 'APPROVE' ? 'bg-[#006323]' : selectedTx.action === 'STEP_UP_3DS' ? 'bg-amber-600' : 'bg-rose-600'
+                }`}>
+                  P(Fraud) = {((selectedTx.fraud_probability ?? 0) * 100).toFixed(1)}%
+                </span>
+                <span className={`w-0 h-0 border-x-4 border-x-transparent border-t-4 ${
+                  selectedTx.action === 'APPROVE' ? 'border-t-[#006323]' : selectedTx.action === 'STEP_UP_3DS' ? 'border-t-amber-600' : 'border-t-rose-600'
+                }`} />
+              </div>
             )}
 
             {/* Segmented Track */}
@@ -221,7 +210,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({
             
             {/* Monospaced Telemetry Chips */}
             <div className="flex flex-wrap gap-1.5 mb-3">
-              <span className="text-[10px] font-mono font-semibold bg-rose-100/60 text-rose-800 px-2 py-0.5 rounded-md">$150.00</span>
+              <span className="text-[10px] font-mono font-semibold bg-rose-100/60 text-rose-800 px-2 py-0.5 rounded-md">$350.00</span>
               <span className="text-[10px] font-mono font-semibold bg-rose-100/60 text-rose-800 px-2 py-0.5 rounded-md">14 tx / 5m</span>
               <span className="text-[10px] font-mono font-semibold bg-rose-100/60 text-rose-800 px-2 py-0.5 rounded-md">Disposable Mail</span>
             </div>
@@ -402,7 +391,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({
                   {selectedTx.tau_decline !== undefined ? selectedTx.tau_decline.toFixed(3) : '0.650'}
                 </span>
                 <span className="text-[10px] text-[#707367] font-medium mt-0.5 block">
-                  Hard Cutoff (k = 7.25)
+                  Hard Cutoff {selectedTx.tau_decline && selectedTx.tau_step_up ? `(k = ${(selectedTx.tau_decline / selectedTx.tau_step_up).toFixed(2)})` : '(k = 7.25)'}
                 </span>
               </div>
             </div>

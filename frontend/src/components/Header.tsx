@@ -61,18 +61,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
         {/* Title */}
         <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-[#202318] tracking-tight">
-              {headerMeta.title}
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-mono font-bold text-[#006323] shadow-xs">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#006323]" />
-              </span>
-              <span>8–10 tx/s Ingest</span>
-            </span>
-          </div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-[#202318] tracking-tight">
+            {headerMeta.title}
+          </h1>
           <p className="text-xs lg:text-sm text-[#707367] mt-1 font-medium">
             {headerMeta.subtitle}
           </p>
