@@ -2,3 +2,12 @@
 models/*.txt text eol=lf
 Dockerfile text eol=lf
 *.sh text eol=lf
+
+# GitHub Linguist Overrides - Ensure repository primary language is Python
+data/*.html linguist-documentation
+data/*.html linguist-detectable=false
+reports/*.html linguist-documentation
+reports/*.html linguist-detectable=false
+reports/**/*.html linguist-documentation
+reports/**/*.html linguist-detectable=false
+frontend/dist/** linguist-vendored
