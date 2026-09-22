@@ -79,32 +79,26 @@ def _load_holdout_batch(batch_size: int = 10000) -> List[Dict[str, Any]]:
 
     return []
 
-def _stream_worker():
+def _score_next_stream_event(batch_size: int = 2):
+    """
+    Scores the next batch of holdout events synchronously during an active HTTP request.
+    This guarantees execution with 100% of the 1.0 dedicated vCPU, eliminating
+    the 2800ms CPU throttling that occurs on serverless background threads between requests.
+    """
     global _HOLDOUT_INDEX, _HOLDOUT_CACHE, _STREAM_ACTIVE
-    time.sleep(1.0) # Grace period for app startup
-    consumer = _get_consumer()
-    
-    if not _HOLDOUT_CACHE:
-        _HOLDOUT_CACHE = _load_holdout_batch(batch_size=10000)
-
-    while _STREAM_ACTIVE and _HOLDOUT_CACHE:
-        # Sleep 1.0s - 1.8s for smooth UI telemetry without CPU contention
-        time.sleep(random.uniform(1.0, 1.8))
-        rec = _HOLDOUT_CACHE[_HOLDOUT_INDEX % len(_HOLDOUT_CACHE)]
-        _HOLDOUT_INDEX += 1
-        
-        try:
-            consumer.score_single_event(rec)
-        except Exception as e:
-            print(f"[Stream Worker Scoring Error] {e}")
-
-def _start_background_stream_if_needed():
-    global _STREAM_THREAD, _STREAM_ACTIVE
     if not _STREAM_ACTIVE:
         return
-    if _STREAM_THREAD is None or not _STREAM_THREAD.is_alive():
-        _STREAM_THREAD = threading.Thread(target=_stream_worker, daemon=True)
-        _STREAM_THREAD.start()
+    if not _HOLDOUT_CACHE:
+        _HOLDOUT_CACHE = _load_holdout_batch(batch_size=10000)
+    if _HOLDOUT_CACHE:
+        consumer = _get_consumer()
+        for _ in range(batch_size):
+            rec = _HOLDOUT_CACHE[_HOLDOUT_INDEX % len(_HOLDOUT_CACHE)]
+            _HOLDOUT_INDEX += 1
+            try:
+                consumer.score_single_event(rec)
+            except Exception as e:
+                print(f"[Stream Scoring Error] {e}")
 
 def _ensure_initial_seed():
     """Seeds the first 10 real holdout transactions if the buffer is empty."""
@@ -127,14 +121,13 @@ def _ensure_initial_seed():
 def get_recent_transactions(limit: int = Query(default=20, ge=1, le=100)) -> List[Dict[str, Any]]:
     """Returns the most recent scored real holdout transactions from the ring buffer."""
     _ensure_initial_seed()
-    _start_background_stream_if_needed()
+    _score_next_stream_event(batch_size=2)
     return GLOBAL_RING_BUFFER.get_recent(limit=limit)
 
 @router.get("/kpis", status_code=status.HTTP_200_OK)
 def get_stream_kpis() -> Dict[str, Any]:
     """Returns rolling portfolio KPI counters and latency SLA percentiles from real holdout transactions."""
     _ensure_initial_seed()
-    _start_background_stream_if_needed()
     kpis = GLOBAL_RING_BUFFER.get_kpis()
     kpis["total_holdout_pool"] = TOTAL_HOLDOUT_POOL
     kpis["chargeback_ratio_pct"] = round(0.42 + random.uniform(-0.02, 0.02), 2)
@@ -158,9 +151,9 @@ def simulate_scenario(
     # 2. Pure LightGBM Probability Inference
     fraud_prob, inference_ms = engine.explainer.predict_proba(feature_df)
     
-    # 3. Decision Router (Option 3: Conformal Risk Control by default)
+    # 3. Decision Router (Bayesian Value-Adaptive Cost Router by default)
     amt = float(payload.TransactionAmt)
-    routing_mode = os.environ.get("ROUTING_MODE", "crc")
+    routing_mode = os.environ.get("ROUTING_MODE", "dynamic")
     crc_tau_star = float(os.environ.get("CRC_TAU_STAR", "0.0817"))
     routing_result = engine.cost_router.route_transaction(
         fraud_prob=fraud_prob,

@@ -86,7 +86,7 @@ export const App: React.FC = () => {
 
     const interval = setInterval(() => {
       fetchStreamData();
-    }, 900);
+    }, 500);
 
     return () => clearInterval(interval);
   }, []);
@@ -115,15 +115,15 @@ export const App: React.FC = () => {
   const handleSimulatePreset = (preset: string) => {
     if (preset === 'attack') {
       handleSimulate({
-        TransactionAmt: 150.0,
+        TransactionAmt: 350.0,
         ProductCD: 'C',
         card1: 8821,
         card4: 'mastercard',
         card6: 'credit',
         P_emaildomain: 'mailinator.com',
         R_emaildomain: 'protonmail.com',
-        C1: 15.0,
-        C2: 15.0,
+        C1: 25.0,
+        C2: 25.0,
         tx_count_5m: 14,
         tx_count_1h: 42,
         amt_sum_24h: 5800.0,
@@ -201,6 +201,7 @@ export const App: React.FC = () => {
         streamOnline={streamOnline}
         avgLatencyMs={kpis.avg_latency_ms}
         p95LatencyMs={kpis.p95_latency_ms}
+        selectedTx={selectedTx}
       />
 
       {/* Main Content Area */}

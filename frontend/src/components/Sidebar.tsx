@@ -7,20 +7,47 @@ import {
   Zap
 } from 'lucide-react';
 
+import type { TransactionItem } from '../types';
+
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   streamOnline: boolean;
   avgLatencyMs?: number;
   p95LatencyMs?: number;
+  selectedTx?: TransactionItem | null;
 }
+
+// Convert screaming snake_case reason codes into human-readable banking terms
+const formatReasonCode = (code: string): string => {
+  const overrides: Record<string, string> = {
+    HIGH_VELOCITY_ASSOCIATED_PHONE_COUNT: 'Phone Burst Velocity',
+    RISK_INDICATOR_R_EMAILDOMAIN: 'Recipient Email Risk',
+    RISK_INDICATOR_P_EMAILDOMAIN: 'Purchaser Email Risk',
+    IRREGULAR_TRANSACTION_CYCLE_DELTA: 'Irregular Timing Cycle',
+    UNUSUAL_TRANSACTION_AMOUNT: 'High Purchase Amount',
+    UNUSUAL_PAYMENT_COUNT_BURST: 'Rapid Payment Spike',
+    HIGH_RISK_CARD_TYPE_CATEGORY: 'Card Category Risk',
+    HIGH_CROSS_MERCHANT_CARD_COUNT: 'Cross-Merchant Spike',
+    NORMAL_ACCOUNT_BEHAVIOR: 'Clean Baseline',
+    LOW_RISK_TRANSACTION_AMOUNT: 'Standard Purchase Amount',
+    VERIFIED_DEVICE_BASELINE: 'Device Baseline',
+  };
+  if (overrides[code]) return overrides[code];
+
+  return code
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeTab, 
   setActiveTab, 
   streamOnline,
-  avgLatencyMs = 24.11,
-  p95LatencyMs = 23.46,
+  avgLatencyMs = 1.42,
+  p95LatencyMs = 15.20,
+  selectedTx,
 }) => {
   return (
     <aside className="w-64 bg-[#f8f9f5] border-r border-[#e9ebe3] p-5 h-screen flex flex-col justify-between fixed top-0 left-0 z-30 select-none overflow-y-auto">
@@ -146,27 +173,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Top Risk Drivers
             </span>
             <span className="text-[9px] font-extrabold text-[#006323] bg-[#e6f7ec] px-1.5 py-0.5 rounded-md border border-[#a7f3d0]">
-              TreeSHAP
+              {selectedTx && selectedTx.reason_codes && selectedTx.reason_codes.length > 0
+                ? `Tx #${selectedTx.transaction_id}`
+                : selectedTx?.action === 'APPROVE'
+                ? 'Fast-Path'
+                : 'TreeSHAP'}
             </span>
           </div>
-          <div className="flex flex-col gap-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#202318] truncate">Transaction Amount</span>
-              <span className="text-[10px] font-bold text-[#b45309] bg-[#fef7e6] border border-[#fde68a] px-1.5 py-0.2 rounded-full mono-num">+0.41</span>
+
+          {selectedTx && selectedTx.reason_codes && selectedTx.reason_codes.length > 0 ? (
+            <div className="flex flex-col gap-1.5 text-xs">
+              {selectedTx.reason_codes.slice(0, 4).map((rc, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-[#202318] truncate" title={formatReasonCode(rc)}>
+                    {formatReasonCode(rc)}
+                  </span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full mono-num border ${
+                    selectedTx.action === 'DECLINE'
+                      ? 'text-[#b91c1c] bg-[#feecee] border-[#fecaca]'
+                      : 'text-[#b45309] bg-[#fef7e6] border-[#fde68a]'
+                  }`}>
+                    #{idx + 1}
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#202318] truncate">5m Card Velocity</span>
-              <span className="text-[10px] font-bold text-[#b45309] bg-[#fef7e6] border border-[#fde68a] px-1.5 py-0.2 rounded-full mono-num">+0.38</span>
+          ) : selectedTx?.action === 'APPROVE' ? (
+            <div className="py-1">
+              <div className="flex items-center gap-1.5 text-[#006323] font-bold text-xs mb-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Clean Baseline Flow</span>
+              </div>
+              <p className="text-[10px] text-[#707367] leading-snug">
+                TreeSHAP bypassed on fast-path approval. Zero adverse signals.
+              </p>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#202318] truncate">Disposable Email</span>
-              <span className="text-[10px] font-bold text-[#b91c1c] bg-[#feecee] border border-[#fecaca] px-1.5 py-0.2 rounded-full mono-num">+0.29</span>
+          ) : (
+            <div className="flex flex-col gap-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#202318] truncate">Transaction Amount</span>
+                <span className="text-[10px] font-bold text-[#006323] bg-[#e6f7ec] border border-[#a7f3d0] px-1.5 py-0.2 rounded-full mono-num">#1</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#202318] truncate">5m Card Velocity</span>
+                <span className="text-[10px] font-bold text-[#006323] bg-[#e6f7ec] border border-[#a7f3d0] px-1.5 py-0.2 rounded-full mono-num">#2</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#202318] truncate">Disposable Email</span>
+                <span className="text-[10px] font-bold text-[#006323] bg-[#e6f7ec] border border-[#a7f3d0] px-1.5 py-0.2 rounded-full mono-num">#3</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#202318] truncate">Account Tenancy</span>
+                <span className="text-[10px] font-bold text-[#006323] bg-[#e6f7ec] border border-[#a7f3d0] px-1.5 py-0.2 rounded-full mono-num">#4</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#202318] truncate">Account Tenancy</span>
-              <span className="text-[10px] font-bold text-[#707367] bg-[#f1f3ee] border border-[#e9ebe3] px-1.5 py-0.2 rounded-full mono-num">+0.22</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>

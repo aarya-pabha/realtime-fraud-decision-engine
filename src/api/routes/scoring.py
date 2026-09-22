@@ -32,9 +32,9 @@ async def score_transaction(
     # 2. Pure LightGBM Probability Inference (<3.5ms)
     fraud_prob, inference_ms = engine.explainer.predict_proba(feature_df)
     
-    # 3. Decision Routing (Option 3: Conformal Risk Control PAC bound enabled by default)
+    # 3. Decision Routing (Bayesian Value-Adaptive Cost Router by default)
     t_route = time.perf_counter()
-    routing_mode = os.environ.get("ROUTING_MODE", "crc")
+    routing_mode = os.environ.get("ROUTING_MODE", "dynamic")
     crc_tau_star = float(os.environ.get("CRC_TAU_STAR", "0.0817"))
     routing_result = engine.cost_router.route_transaction(
         fraud_prob=fraud_prob,

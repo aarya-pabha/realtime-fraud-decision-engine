@@ -210,9 +210,9 @@ class StreamingScoringConsumer:
         # 3. Pure LightGBM probability inference (<3.5ms)
         fraud_prob, inference_ms = self.explainer.predict_proba(feature_df)
         
-        # 4. Decision routing (Option 3: Conformal Risk Control by default)
+        # 4. Decision routing (Bayesian Value-Adaptive Cost Router by default)
         t_route = time.perf_counter()
-        routing_mode = os.environ.get("ROUTING_MODE", "crc")
+        routing_mode = os.environ.get("ROUTING_MODE", "dynamic")
         crc_tau_star = float(os.environ.get("CRC_TAU_STAR", "0.0817"))
         route_res = self.cost_router.route_transaction(
             fraud_prob=fraud_prob,
